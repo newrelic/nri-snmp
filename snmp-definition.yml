@@ -1,0 +1,34 @@
+# Copy this file (and the built 'bin' folder) into the following folder:
+#    Linux: /var/db/newrelic-infra/custom-integrations
+#    Windows: C:\Program Files\New Relic\newrelic-infra\custom-integrations
+#
+# For a complete description of the Definition File Specification, please
+# refer to the Integrations SDK documentation:
+# https://docs.newrelic.com/docs/integrations/integrations-sdk/file-specifications
+
+name: com.newrelic.nri-snmp
+description: Reports status and metrics for nri-snmp service
+protocol_version: 1
+os: linux
+
+commands:
+  all_data:
+    command:
+      - ./bin/nr-snmp
+    interval: 30
+  metrics:
+    command:
+      - ./bin/nr-snmp
+      - --metrics
+    interval: 30
+  inventory:
+    command:
+      - ./bin/nr-snmp
+      - --inventory
+    prefix: config/nr-snmp
+    interval: 30
+  events:
+    command:
+    - ./bin/nr-snmp
+    - --events
+    interval: 30

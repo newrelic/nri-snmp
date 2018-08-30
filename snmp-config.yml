@@ -1,0 +1,18 @@
+# Copy this file into the following folder:
+#    Linux: /etc/newrelic-infra/integrations.d
+#    Windows: C:\Program Files\New Relic\newrelic-infra\integrations.d
+#
+# For a complete description of the Configuration File Specification, please
+# refer to the Integrations SDK documentation:
+# https://docs.newrelic.com/docs/integrations/integrations-sdk/file-specifications
+
+integration_name: com.newrelic.nri-snmp
+
+instances:
+  - name: nri-snmp
+    command: all_data
+    arguments:
+      hostname: localhost
+      port: 161
+      community: public
+      config_file: snmp-queries.json

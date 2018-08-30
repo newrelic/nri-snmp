@@ -1,0 +1,30 @@
+# Configuration file template, provided in case you want to provide extra
+# configuration over the nr-nri-snmp-config.yml
+# file.
+#
+# For a complete description of the Configuration File Specification, please
+# refer to the Integrations SDK documentation:
+# https://docs.newrelic.com/docs/integrations/integrations-sdk/file-specifications
+
+integration_name: com.newrelic.nri-snmp
+
+instances:
+  - name: <INSTANCE IDENTIFIER>
+    command: metrics
+    arguments:
+      hostname: localhost
+      port: 161
+      community: public
+      config_file: snmp-queries.json
+    labels:
+      key1: <LABEL_VALUE>
+
+  - name: <OTHER INSTANCE IDENTIFIER>
+    command: inventory
+    arguments:
+      hostname: localhost
+      port: 161
+      community: public
+      config_file: snmp-queries.json
+    labels:
+      key1: <LABEL_VALUE>

@@ -1,0 +1,33 @@
+[
+    {
+        "name": "sample scalar metrics and inventory",
+        "eventType": "WeatherSample",
+        "metricDefinitions": {
+            "description":   [".1.3.6.1.4.1.52032.2.94.2.0", "ATTRIBUTE"],
+            "solarActivityIndex":   [".1.3.6.1.4.1.52032.1.152.3.0", "GAUGE"],
+            "heatIndex":   [".1.3.6.1.4.1.52032.1.152.9.0", "GAUGE"],
+            "incidentCount":   [".1.3.6.1.4.1.52032.1.152.9.0", "GAUGE"]
+        },
+        "inventoryDefinitions": {
+            "category1": {
+                "weatherSoftAgentVersion":   [".1.3.6.1.4.1.52032.1.1.1.1.0"]
+            }
+        }
+    },
+    {
+        "name": "sample table metrics",
+        "eventType": "CityWeatherSample",
+        "tableRoot": ".1.3.6.1.4.1.52032.3.1.7",
+        "index": {"city": ".1.3.6.1.4.1.52032.3.1.7.1.1"},
+        "metricDefinitions": {
+            "temperature": [".1.3.6.1.4.1.52032.3.1.7.1.2", "GAUGE"],
+            "humidity": [".1.3.6.1.4.1.52032.3.1.7.1.3", "GAUGE"],
+            "wind": [".1.3.6.1.4.1.52032.3.1.7.1.4", "GAUGE"],
+            "windDirection": [".1.3.6.1.4.1.52032.3.1.7.1.5", "ATTRIBUTE"],
+            "precipitaion": [".1.3.6.1.4.1.52032.3.1.7.1.6", "GAUGE"],
+            "description": [".1.3.6.1.4.1.52032.3.1.7.1.7", "ATTRIBUTE"],
+            "pollenCount": [".1.3.6.1.4.1.52032.3.1.7.1.8", "GAUGE"],
+            "happinessIndex": [".1.3.6.1.4.1.52032.3.1.7.1.9", "GAUGE"]
+        }
+    }
+]
