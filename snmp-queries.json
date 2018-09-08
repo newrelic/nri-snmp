@@ -1,33 +1,28 @@
 [
     {
         "name": "sample scalar metrics and inventory",
-        "eventType": "WeatherSample",
+        "eventType": "SNMPScalarsSample",
         "metricDefinitions": {
-            "description":   [".1.3.6.1.4.1.52032.2.94.2.0", "ATTRIBUTE"],
-            "solarActivityIndex":   [".1.3.6.1.4.1.52032.1.152.3.0", "GAUGE"],
-            "heatIndex":   [".1.3.6.1.4.1.52032.1.152.9.0", "GAUGE"],
-            "incidentCount":   [".1.3.6.1.4.1.52032.1.152.9.0", "GAUGE"]
+            "testint":   [".1.3.6.1.4.1.52032.1.1.1.0", "GAUGE"],
+            "testcount":   [".1.3.6.1.4.1.52032.1.1.2.0", "GAUGE"],
+            "teststring":   [".1.3.6.1.4.1.52032.1.1.3.0", "ATTRIBUTE"]
         },
         "inventoryDefinitions": {
             "category1": {
-                "weatherSoftAgentVersion":   [".1.3.6.1.4.1.52032.1.1.1.1.0"]
+                "version":   [".1.3.6.1.4.1.52032.1.1.3.0"]
             }
         }
     },
     {
         "name": "sample table metrics",
         "eventType": "CityWeatherSample",
-        "tableRoot": ".1.3.6.1.4.1.52032.3.1.7",
-        "index": {"city": ".1.3.6.1.4.1.52032.3.1.7.1.1"},
+        "tableRoot": ".1.3.6.1.4.1.52032.1.2.1",
+        "index": {"city": ".1.3.6.1.4.1.52032.1.2.1.1.1"},
         "metricDefinitions": {
-            "temperature": [".1.3.6.1.4.1.52032.3.1.7.1.2", "GAUGE"],
-            "humidity": [".1.3.6.1.4.1.52032.3.1.7.1.3", "GAUGE"],
-            "wind": [".1.3.6.1.4.1.52032.3.1.7.1.4", "GAUGE"],
-            "windDirection": [".1.3.6.1.4.1.52032.3.1.7.1.5", "ATTRIBUTE"],
-            "precipitaion": [".1.3.6.1.4.1.52032.3.1.7.1.6", "GAUGE"],
-            "description": [".1.3.6.1.4.1.52032.3.1.7.1.7", "ATTRIBUTE"],
-            "pollenCount": [".1.3.6.1.4.1.52032.3.1.7.1.8", "GAUGE"],
-            "happinessIndex": [".1.3.6.1.4.1.52032.3.1.7.1.9", "GAUGE"]
+            "temperature": [".1.3.6.1.4.1.52032.1.2.1.1.2", "GAUGE"],
+            "humidity": [".1.3.6.1.4.1.52032.1.2.1.1.3", "GAUGE"],
+            "wind": [".1.3.6.1.4.1.52032.1.2.1.1.4", "GAUGE"],
+            "windDirection": [".1.3.6.1.4.1.52032.1.2.1.1.5", "ATTRIBUTE"]
         }
     }
 ]
