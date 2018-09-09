@@ -60,42 +60,44 @@ func populateScalarMetrics(entity *integration.Entity, msDefinition metricSetDef
 
 func populateTableMetrics(entity *integration.Entity, msDefinition metricSetDefinition) error {
 	tableOid := msDefinition.TableRoot
-	index := msDefinition.Index
-	var indexName string
-	var indexOid string
-	for indexK, indexV := range index {
-		indexName = indexK
-		indexOid = indexV
-		break
-	}
+	indices := msDefinition.Index
 	metricDefs := msDefinition.MetricDefinitions
 
-	indexKeys := make([]string, 0, 0)
-	indexKeyValueMapper := make(map[string]string)
+	indexKeys := make(map[string]struct{}) // "Set" datastructure
+	var exists = struct{}{}
+
+	indexAttributeMaps := make(map[string]map[string]string)
 	metrics := make(map[string]gosnmp.SnmpPDU)
 
 	snmpWalkCallback := func(pdu gosnmp.SnmpPDU) error {
 		oid := strings.TrimSpace(pdu.Name)
-		indexKeyPattern := indexOid + "\\.(.*)"
-		re, err := regexp.Compile(indexKeyPattern)
-		if err != nil {
-			return err
-		}
-		matches := re.FindStringSubmatch(oid)
-		if len(matches) > 1 {
-			indexKey := matches[1]
-			indexKeys = append(indexKeys, indexKey)
-			indexValue := "unknown"
-			switch pdu.Type {
-			case gosnmp.OctetString:
-				indexValue = string(pdu.Value.([]byte))
-			case gosnmp.Gauge32, gosnmp.Counter32:
-				indexValue = gosnmp.ToBigInt(pdu.Value).String()
-			default:
-				log.Error("Unsupported index value type")
+		for indexName, indexOid := range indices {
+			indexKeyPattern := indexOid + "\\.(.*)"
+			re, err := regexp.Compile(indexKeyPattern)
+			if err != nil {
+				return err
 			}
-			indexKeyValueMapper[indexKey] = indexValue
-			return nil
+			matches := re.FindStringSubmatch(oid)
+			if len(matches) > 1 {
+				indexKey := matches[1]
+				indexKeys[indexKey] = exists
+				indexValue := "unknown"
+				switch pdu.Type {
+				case gosnmp.OctetString:
+					indexValue = string(pdu.Value.([]byte))
+				case gosnmp.Gauge32, gosnmp.Counter32:
+					indexValue = gosnmp.ToBigInt(pdu.Value).String()
+				default:
+					log.Error("Unsupported index value type")
+				}
+				indexMap, ok := indexAttributeMaps[indexKey]
+				if !ok {
+					indexMap = make(map[string]string)
+					indexAttributeMaps[indexKey] = indexMap
+				}
+				indexMap[indexName] = indexValue
+				return nil
+			}
 		}
 		metrics[oid] = pdu
 		return nil
@@ -106,14 +108,16 @@ func populateTableMetrics(entity *integration.Entity, msDefinition metricSetDefi
 		return err
 	}
 
-	for _, indexKey := range indexKeys {
+	for indexKey := range indexKeys {
 		ms := entity.NewMetricSet(msDefinition.EventType)
 
-		indexValue, ok := indexKeyValueMapper[indexKey]
+		indexMap, ok := indexAttributeMaps[indexKey]
 		if !ok {
 			continue
 		}
-		err = ms.SetMetric(indexName, indexValue, metric.ATTRIBUTE)
+		for indexName, indexValue := range indexMap {
+			err = ms.SetMetric(indexName, indexValue, metric.ATTRIBUTE)
+		}
 		if err != nil {
 			log.Error(err.Error())
 		}
@@ -172,7 +176,6 @@ func processSNMPValue(pdu gosnmp.SnmpPDU, oidDefMap map[string]metricDef, ms *me
 	case gosnmp.OctetString:
 		value = string(pdu.Value.([]byte))
 		sourceType = metric.ATTRIBUTE
-		log.Warn("Plugin will report OctetString values as ATTRIBUTE source type only [" + name + "]")
 	case gosnmp.Gauge32, gosnmp.Counter32:
 		value = gosnmp.ToBigInt(pdu.Value)
 		sourceType = getSourceType(srctype)
