@@ -12,56 +12,57 @@ import (
 
 type metricDef struct {
 	name       string
-	sourcetype string
+	sourcetype metric.SourceType
 }
 
-func populateMetrics(entity *integration.Entity, msDefinition metricSetDefinition) error {
-	tableOid := msDefinition.TableRoot
-	if tableOid == "" {
-		err := populateScalarMetrics(entity, msDefinition)
-		if err != nil {
-			return err
+func runCollection(collection []*descDefinition, i *integration.Integration) error {
+	for _, description := range collection {
+		eventType := description.eventType
+		scalarMetrics := description.scalarMetrics
+		if len(scalarMetrics) > 0 {
+			populateScalarMetrics(eventType, scalarMetrics, i)
 		}
-	} else {
-		err := populateTableMetrics(entity, msDefinition)
-		if err != nil {
-			return err
+		tableDefinition := description.tableDefinition
+		if len(tableDefinition.metrics) > 0 {
+			populateTableMetrics(eventType, tableDefinition, i)
 		}
 	}
-
 	return nil
 }
 
-func populateScalarMetrics(entity *integration.Entity, msDefinition metricSetDefinition) error {
-	eventType := msDefinition.EventType
-	metricDefinitions := msDefinition.MetricDefinitions
-	ms := entity.NewMetricSet(eventType)
+func populateScalarMetrics(eventType string, metricDefinitions []*attributeRequest, i *integration.Integration) error {
+	// Create an entity for the host
+	e, err := i.Entity(args.Hostname, "host")
+	if err != nil {
+		return err
+	}
+	ms := e.NewMetricSet(eventType)
 	var oids []string
 	oidDefMap := make(map[string]metricDef)
-	for metricName, metricDefinition := range metricDefinitions {
-		oid := strings.TrimSpace(metricDefinition[0])
-		metricSourceType := strings.TrimSpace(metricDefinition[1])
+	for _, metricDefinition := range metricDefinitions {
+		oid := strings.TrimSpace(metricDefinition.oid)
 		oids = append(oids, oid)
-		oidDefMap[oid] = metricDef{name: metricName, sourcetype: metricSourceType}
+		oidDefMap[oid] = metricDef{name: metricDefinition.metricName, sourcetype: metricDefinition.metricType}
 	}
 	snmpGetResult, err := theSNMP.Get(oids)
 	if err != nil {
-		log.Error("SNMP Get Error", err)
+		log.Error("SNMP Get Error %s", err)
 		return err
 	}
 	for _, variable := range snmpGetResult.Variables {
 		err = processSNMPValue(variable, oidDefMap, ms)
 		if err != nil {
-			log.Error("SNMP Error processing ", variable.Name, err)
+			log.Error("SNMP Error processing %s. %s", variable.Name, err)
 		}
 	}
 	return nil
 }
 
-func populateTableMetrics(entity *integration.Entity, msDefinition metricSetDefinition) error {
-	tableOid := msDefinition.TableRoot
-	indices := msDefinition.Index
-	metricDefs := msDefinition.MetricDefinitions
+func populateTableMetrics(eventType string, tableDefinition tableDefinition, i *integration.Integration) error {
+	var err error
+	tableOid := tableDefinition.rootOid
+	indices := tableDefinition.index
+	metricDefinition := tableDefinition.metrics
 
 	indexKeys := make(map[string]struct{}) // "Set" datastructure
 	var exists = struct{}{}
@@ -71,8 +72,8 @@ func populateTableMetrics(entity *integration.Entity, msDefinition metricSetDefi
 
 	snmpWalkCallback := func(pdu gosnmp.SnmpPDU) error {
 		oid := strings.TrimSpace(pdu.Name)
-		for indexName, indexOid := range indices {
-			indexKeyPattern := indexOid + "\\.(.*)"
+		for _, index := range indices {
+			indexKeyPattern := index.oid + "\\.(.*)"
 			re, err := regexp.Compile(indexKeyPattern)
 			if err != nil {
 				return err
@@ -95,59 +96,62 @@ func populateTableMetrics(entity *integration.Entity, msDefinition metricSetDefi
 					indexMap = make(map[string]string)
 					indexAttributeMaps[indexKey] = indexMap
 				}
-				indexMap[indexName] = indexValue
+				indexMap[index.name] = indexValue
 				return nil
 			}
 		}
 		metrics[oid] = pdu
 		return nil
 	}
-	err := theSNMP.BulkWalk(tableOid, snmpWalkCallback)
+	err = theSNMP.BulkWalk(tableOid, snmpWalkCallback)
 	if err != nil {
 		log.Error("SNMP Walk Error")
 		return err
 	}
 
 	for indexKey := range indexKeys {
-		ms := entity.NewMetricSet(msDefinition.EventType)
 
 		indexMap, ok := indexAttributeMaps[indexKey]
 		if !ok {
 			continue
 		}
+		// Create an entity for the host
+		e, err := i.Entity(args.Hostname, "host")
+		if err != nil {
+			return err
+		}
+		ms := e.NewMetricSet(eventType)
 		for indexName, indexValue := range indexMap {
 			err = ms.SetMetric(indexName, indexValue, metric.ATTRIBUTE)
 		}
 		if err != nil {
 			log.Error(err.Error())
 		}
-		for name, metricDef := range metricDefs {
-			baseOid := strings.TrimSpace(metricDef[0])
-			srctype := strings.TrimSpace(metricDef[1])
+		for _, metricDefinition := range metricDefinition {
+			baseOid := strings.TrimSpace(metricDefinition.oid)
+			metricName := metricDefinition.metricName
+			sourceType := metricDefinition.metricType
 			oid := baseOid + "." + indexKey
 			pdu := metrics[oid]
-			var sourceType metric.SourceType
 			var value interface{}
 
 			switch pdu.Type {
 			case gosnmp.OctetString:
 				value = string(pdu.Value.([]byte))
 				sourceType = metric.ATTRIBUTE
-				log.Error("This plugin will always report OctetString values as ATTRIBUTE source type [" + name + "]")
+				log.Error("This plugin will always report OctetString values as ATTRIBUTE source type [" + metricName + "]")
 			case gosnmp.Gauge32, gosnmp.Counter32:
 				value = gosnmp.ToBigInt(pdu.Value)
-				sourceType = getSourceType(srctype)
 				if sourceType == metric.ATTRIBUTE {
 					value = gosnmp.ToBigInt(pdu.Value).String()
 				}
 			default:
 				value = pdu.Value
-				sourceType = getSourceType(srctype)
 				if sourceType == metric.ATTRIBUTE {
 					value = gosnmp.ToBigInt(pdu.Value).String()
 				}
 			}
-			err = ms.SetMetric(name, value, sourceType)
+			err = ms.SetMetric(metricName, value, sourceType)
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -158,7 +162,6 @@ func populateTableMetrics(entity *integration.Entity, msDefinition metricSetDefi
 
 func processSNMPValue(pdu gosnmp.SnmpPDU, oidDefMap map[string]metricDef, ms *metric.Set) error {
 	var name string
-	var srctype string
 	var sourceType metric.SourceType
 	var value interface{}
 
@@ -166,7 +169,7 @@ func processSNMPValue(pdu gosnmp.SnmpPDU, oidDefMap map[string]metricDef, ms *me
 	oidDef, ok := oidDefMap[oid]
 	if ok {
 		name = oidDef.name
-		srctype = oidDef.sourcetype
+		sourceType = oidDef.sourcetype
 	} else {
 		log.Error("OID not configured in metricDefinitions and will not be reported[" + oid + "]")
 		return nil
@@ -178,13 +181,11 @@ func processSNMPValue(pdu gosnmp.SnmpPDU, oidDefMap map[string]metricDef, ms *me
 		sourceType = metric.ATTRIBUTE
 	case gosnmp.Gauge32, gosnmp.Counter32:
 		value = gosnmp.ToBigInt(pdu.Value)
-		sourceType = getSourceType(srctype)
 		if sourceType == metric.ATTRIBUTE {
 			value = gosnmp.ToBigInt(pdu.Value).String()
 		}
 	default:
 		value = pdu.Value
-		sourceType = getSourceType(srctype)
 		if sourceType == metric.ATTRIBUTE {
 			value = gosnmp.ToBigInt(pdu.Value).String()
 		}
@@ -217,6 +218,7 @@ func getSourceType(srctype string) metric.SourceType {
 	return sourceType
 }
 
+/*
 func populateInventory(entity *integration.Entity, msDefinition metricSetDefinition) error {
 	tableOid := msDefinition.TableRoot
 	if tableOid == "" {
@@ -273,3 +275,4 @@ func populateInventory(entity *integration.Entity, msDefinition metricSetDefinit
 	}
 	return nil
 }
+*/

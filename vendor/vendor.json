@@ -86,6 +86,13 @@
 			"path": "golang.org/x/net/context",
 			"revision": "8a410e7b638dca158bf9e766925842f6651ff828",
 			"revisionTime": "2018-08-25T16:15:26Z"
+		},
+		{
+			"checksumSHA1": "ZSWoOPUNRr5+3dhkLK3C4cZAQPk=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "5420a8b6744d3b0345ab293f6fcba19c978f1183",
+			"revisionTime": "2018-03-28T19:50:20Z",
+			"tree": true
 		}
 	],
 	"rootPath": "github.com/newrelic/nri-snmp"

@@ -20,11 +20,11 @@ func connect() error {
 			Timeout:       time.Duration(30) * time.Second,
 			SecurityModel: gosnmp.UserSecurityModel,
 			MsgFlags:      gosnmp.AuthPriv,
-			SecurityParameters: &gosnmp.UsmSecurityParameters{UserName: args.V3Username,
+			SecurityParameters: &gosnmp.UsmSecurityParameters{UserName: args.Username,
 				AuthenticationProtocol:   gosnmp.SHA,
-				AuthenticationPassphrase: args.V3Passphrase,
+				AuthenticationPassphrase: args.AuthPassphrase,
 				PrivacyProtocol:          gosnmp.DES,
-				PrivacyPassphrase:        args.V3PrivPassphrase,
+				PrivacyPassphrase:        args.PrivPassphrase,
 			},
 		}
 	} else {
