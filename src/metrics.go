@@ -10,27 +10,26 @@ import (
 	"github.com/soniah/gosnmp"
 )
 
-type metricDef struct {
-	name       string
-	sourcetype metric.SourceType
-}
-
-func runCollection(collection []*descDefinition, i *integration.Integration) error {
-	for _, description := range collection {
-		eventType := description.eventType
-		scalarMetrics := description.scalarMetrics
+func runCollection(collections []*collectionDefinition, i *integration.Integration) error {
+	for _, collection := range collections {
+		eventType := collection.eventType
+		scalarMetrics := collection.scalarMetrics
 		if len(scalarMetrics) > 0 {
 			populateScalarMetrics(eventType, scalarMetrics, i)
 		}
-		tableDefinition := description.tableDefinition
-		if len(tableDefinition.metrics) > 0 {
+		inventoryItems := collection.inventoryItemDefinition
+		if len(inventoryItems) > 0 {
+			populateInventory(eventType, inventoryItems, i)
+		}
+		tableDefinition := collection.tableDefinition
+		if len(tableDefinition.columnDefinitions) > 0 {
 			populateTableMetrics(eventType, tableDefinition, i)
 		}
 	}
 	return nil
 }
 
-func populateScalarMetrics(eventType string, metricDefinitions []*attributeRequest, i *integration.Integration) error {
+func populateScalarMetrics(eventType string, metricDefinitions []*metricDefinition, i *integration.Integration) error {
 	// Create an entity for the host
 	e, err := i.Entity(args.Hostname, "host")
 	if err != nil {
@@ -38,11 +37,11 @@ func populateScalarMetrics(eventType string, metricDefinitions []*attributeReque
 	}
 	ms := e.NewMetricSet(eventType)
 	var oids []string
-	oidDefMap := make(map[string]metricDef)
+	metricDefinitionMap := make(map[string]*metricDefinition)
 	for _, metricDefinition := range metricDefinitions {
 		oid := strings.TrimSpace(metricDefinition.oid)
 		oids = append(oids, oid)
-		oidDefMap[oid] = metricDef{name: metricDefinition.metricName, sourcetype: metricDefinition.metricType}
+		metricDefinitionMap[oid] = metricDefinition
 	}
 	snmpGetResult, err := theSNMP.Get(oids)
 	if err != nil {
@@ -50,7 +49,7 @@ func populateScalarMetrics(eventType string, metricDefinitions []*attributeReque
 		return err
 	}
 	for _, variable := range snmpGetResult.Variables {
-		err = processSNMPValue(variable, oidDefMap, ms)
+		err = processSNMPValue(variable, metricDefinitionMap, ms)
 		if err != nil {
 			log.Error("SNMP Error processing %s. %s", variable.Name, err)
 		}
@@ -61,8 +60,8 @@ func populateScalarMetrics(eventType string, metricDefinitions []*attributeReque
 func populateTableMetrics(eventType string, tableDefinition tableDefinition, i *integration.Integration) error {
 	var err error
 	tableOid := tableDefinition.rootOid
-	indices := tableDefinition.index
-	metricDefinition := tableDefinition.metrics
+	indices := tableDefinition.indexDefinitions
+	metricDefinition := tableDefinition.columnDefinitions
 
 	indexKeys := make(map[string]struct{}) // "Set" datastructure
 	var exists = struct{}{}
@@ -133,6 +132,9 @@ func populateTableMetrics(eventType string, tableDefinition tableDefinition, i *
 			sourceType := metricDefinition.metricType
 			oid := baseOid + "." + indexKey
 			pdu := metrics[oid]
+			if metricName == "" {
+				metricName = oid
+			}
 			var value interface{}
 
 			switch pdu.Type {
@@ -160,16 +162,19 @@ func populateTableMetrics(eventType string, tableDefinition tableDefinition, i *
 	return nil
 }
 
-func processSNMPValue(pdu gosnmp.SnmpPDU, oidDefMap map[string]metricDef, ms *metric.Set) error {
+func processSNMPValue(pdu gosnmp.SnmpPDU, metricDefinitionMap map[string]*metricDefinition, ms *metric.Set) error {
 	var name string
 	var sourceType metric.SourceType
 	var value interface{}
 
 	oid := strings.TrimSpace(pdu.Name)
-	oidDef, ok := oidDefMap[oid]
+	metricDefinition, ok := metricDefinitionMap[oid]
 	if ok {
-		name = oidDef.name
-		sourceType = oidDef.sourcetype
+		name = metricDefinition.metricName
+		if name == "" {
+			name = metricDefinition.oid
+		}
+		sourceType = metricDefinition.metricType
 	} else {
 		log.Error("OID not configured in metricDefinitions and will not be reported[" + oid + "]")
 		return nil
@@ -201,78 +206,62 @@ func processSNMPValue(pdu gosnmp.SnmpPDU, oidDefMap map[string]metricDef, ms *me
 	return nil
 }
 
-func getSourceType(srctype string) metric.SourceType {
-	var sourceType metric.SourceType
-	switch srctype {
-	case "gauge", "GAUGE", "Gauge":
-		sourceType = metric.GAUGE
-	case "attribute", "ATTRIBUTE", "Attribute":
-		sourceType = metric.ATTRIBUTE
-	case "rate", "RATE", "Rate":
-		sourceType = metric.RATE
-	case "delta", "DELTA", "Delta":
-		sourceType = metric.DELTA
-	default:
-		sourceType = metric.GAUGE
+func populateInventory(eventType string, inventoryItems []*inventoryItemDefinition, i *integration.Integration) error {
+	// Create an entity for the host
+	e, err := i.Entity(args.Hostname, "host")
+	if err != nil {
+		return err
 	}
-	return sourceType
-}
 
-/*
-func populateInventory(entity *integration.Entity, msDefinition metricSetDefinition) error {
-	tableOid := msDefinition.TableRoot
-	if tableOid == "" {
-		categoryDefinitions := msDefinition.InventoryDefinitions
-		for category, categoryDefinition := range categoryDefinitions {
-			var oids []string
-			oidMap := make(map[string]string)
-			for metricName, inventoryDefinition := range categoryDefinition {
-				oid := strings.TrimSpace(inventoryDefinition[0])
-				oids = append(oids, oid)
-				oidMap[oid] = metricName
-			}
-			snmpGetResult, err := theSNMP.Get(oids)
+	var oids []string
+	inventoryOidMap := make(map[string]*inventoryItemDefinition)
+	for _, inventoryItem := range inventoryItems {
+		oid := strings.TrimSpace(inventoryItem.oid)
+		oids = append(oids, oid)
+		inventoryOidMap[oid] = inventoryItem
+	}
+
+	snmpGetResult, err := theSNMP.Get(oids)
+	if err != nil {
+		log.Error("SNMP Get error fetching inventory items", err)
+		return err
+	}
+	for _, variable := range snmpGetResult.Variables {
+		var name string
+		var category string
+		var value interface{}
+
+		oid := strings.TrimSpace(variable.Name)
+		itemDefinition, ok := inventoryOidMap[oid]
+		if ok {
+			name = itemDefinition.name
+			category = itemDefinition.category
+		} else {
+			log.Error("OID not configured in inventoryDefinitions and will not be reported[" + oid + "]")
+			continue
+		}
+
+		switch variable.Type {
+		case gosnmp.OctetString:
+			value = string(variable.Value.([]byte))
+		case gosnmp.Gauge32, gosnmp.Counter32:
+			value = gosnmp.ToBigInt(variable.Value)
+		default:
+			value = variable.Value
+		}
+
+		if value != nil {
+			err = e.SetInventoryItem(category, name, value)
 			if err != nil {
-				log.Error("SNMP Get Error", err)
-				return err
+				log.Error(err.Error())
 			}
-			for _, variable := range snmpGetResult.Variables {
-				var name string
-				var value interface{}
-
-				oid := strings.TrimSpace(variable.Name)
-				metricName, ok := oidMap[oid]
-				if ok {
-					name = metricName
-				} else {
-					log.Error("OID not configured in inventoryDefinitions and will not be reported[" + oid + "]")
-					return nil
-				}
-
-				switch variable.Type {
-				case gosnmp.OctetString:
-					value = string(variable.Value.([]byte))
-				case gosnmp.Gauge32, gosnmp.Counter32:
-					value = gosnmp.ToBigInt(variable.Value)
-				default:
-					value = variable.Value
-				}
-
-				if value != nil {
-					err = entity.SetInventoryItem(category, name, value)
-					if err != nil {
-						log.Error(err.Error())
-					}
-					if err != nil {
-						log.Error(err.Error())
-					}
-				}
-				if err != nil {
-					log.Error("SNMP Error processing inventory variable "+variable.Name, err)
-				}
+			if err != nil {
+				log.Error(err.Error())
 			}
+		}
+		if err != nil {
+			log.Error("SNMP Error processing inventory variable "+variable.Name, err)
 		}
 	}
 	return nil
 }
-*/

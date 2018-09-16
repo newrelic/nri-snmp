@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -42,9 +43,10 @@ func connect() error {
 	err := theSNMP.Connect()
 	if err != nil {
 		log.Error("Connect error")
+		os.Exit(1)
 		return err
 	}
-	log.Info("Connect established to " + target)
+	log.Info("SNMP target: " + target)
 	return nil
 }
 

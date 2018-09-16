@@ -13,10 +13,11 @@ import (
 // parsing of a collection yaml file
 type collectionDefinitionParser struct {
 	Collect []struct {
-		Description   string                   `yaml:"description"`
-		EventType     string                   `yaml:"event_type"`
-		ScalarMetrics []metricDefinitionParser `yaml:"scalar_metrics"`
-		TableMetrics  tableDefinitionParser    `yaml:"table_metrics"`
+		Description   string                      `yaml:"description"`
+		EventType     string                      `yaml:"event_type"`
+		ScalarMetrics []metricDefinitionParser    `yaml:"scalar_metrics"`
+		TableMetrics  tableDefinitionParser       `yaml:"table_metrics"`
+		Inventory     []inventoryDefinitionParser `yaml:"inventory"`
 	}
 }
 
@@ -26,6 +27,14 @@ type metricDefinitionParser struct {
 	Oid        string `yaml:"oid"`
 	MetricType string `yaml:"metric_type"`
 	MetricName string `yaml:"metric_name"`
+}
+
+// inventoryDefinitionParser is a struct to aid the automatic
+// parsing of a collection yaml file
+type inventoryDefinitionParser struct {
+	Oid      string `yaml:"oid"`
+	Category string `yaml:"category"`
+	Name     string `yaml:"name"`
 }
 
 // tableDefinitionParser is a struct to aid the automatic
@@ -43,38 +52,46 @@ type indexDefinitionParser struct {
 	Name string `yaml:"name"`
 }
 
-// descDefinition is a validated and simplified
+// collectionDefinition is a validated and simplified
 // representation of the requested collection parameters
-// from a single domain
-type descDefinition struct {
-	description     string
-	eventType       string
-	scalarMetrics   []*attributeRequest
-	tableDefinition tableDefinition
+// from a single collection
+type collectionDefinition struct {
+	description             string
+	eventType               string
+	scalarMetrics           []*metricDefinition
+	tableDefinition         tableDefinition
+	inventoryItemDefinition []*inventoryItemDefinition
 }
 
 // tableDefinition is a validated and simplified
 // representation of the requested collection parameters
-// from a single domain
+// from a single table
 type tableDefinition struct {
-	rootOid string
-	index   []*index
-	metrics []*attributeRequest
+	rootOid           string
+	indexDefinitions  []*indexDefinition
+	columnDefinitions []*metricDefinition
 }
 
-// attributeRequest is a storage struct containing
-// the information necessary to turn a OID
-// into a metric
-type attributeRequest struct {
+// metricDefinition is a storage struct containing
+// the information of a single metric. It can represent
+// a scalar metric or a table metric
+type metricDefinition struct {
 	oid        string
 	metricName string
 	metricType metric.SourceType
 }
 
-// index is a storage struct containing
-// the information necessary to turn a OID
-// into a index
-type index struct {
+// inventoryItemDefinition is a storage struct containing
+// the information of a single inventory item
+type inventoryItemDefinition struct {
+	oid      string
+	category string
+	name     string
+}
+
+// indexDefinition is a storage struct containing
+// the information representing a table index
+type indexDefinition struct {
 	oid  string
 	name string
 }
@@ -110,59 +127,94 @@ func parseYaml(filename string) (*collectionDefinitionParser, error) {
 }
 
 // parseCollection takes a raw collectionDefinitionParser and returns
-// an array of domains containing the validated configuration
-func parseCollectionDefinition(c *collectionDefinitionParser) ([]*descDefinition, error) {
+// an array of collections containing the validated configuration
+func parseCollectionDefinition(c *collectionDefinitionParser) ([]*collectionDefinition, error) {
 
-	// For each metricSet in the collection
-	var collections []*descDefinition
-	for _, metricSetDef := range c.Collect {
-		var scalarMetrics []*attributeRequest
-		var newMetric *attributeRequest
-		// For each scalar metric in the metricSet
-		for _, oidDef := range metricSetDef.ScalarMetrics {
-			// Parse the metric and add it to the set
-			newMetric = &attributeRequest{metricName: oidDef.MetricName, oid: oidDef.Oid}
-			metricTypeString := oidDef.MetricType
-			mt, ok := metricTypes[metricTypeString]
-			if !ok {
-				return nil, fmt.Errorf("invalid metric type %s", metricTypeString)
-			}
-			newMetric.metricType = mt
-			scalarMetrics = append(scalarMetrics, newMetric)
-		}
-
-		tableDef := metricSetDef.TableMetrics
-		var tableMetrics []*attributeRequest
-		// For each table metric in the table column set
-		for _, oidDef := range tableDef.Metrics {
-			// Parse the metric and add it to the set
-			newMetric = &attributeRequest{metricName: oidDef.MetricName, oid: oidDef.Oid}
-			metricTypeString := oidDef.MetricType
-			mt, ok := metricTypes[metricTypeString]
-			if !ok {
-				return nil, fmt.Errorf("invalid metric type %s", metricTypeString)
-			}
-			newMetric.metricType = mt
-			tableMetrics = append(tableMetrics, newMetric)
-		}
-
-		var tableIndices []*index
-		var newIndex *index
-		for _, indexOidDef := range tableDef.Index {
-			newIndex = &index{name: indexOidDef.Name, oid: indexOidDef.Oid}
-			tableIndices = append(tableIndices, newIndex)
-		}
-		tableDefinition := tableDefinition{rootOid: tableDef.RootOid, index: tableIndices, metrics: tableMetrics}
-
+	// For each collection
+	var collections []*collectionDefinition
+	for _, parsedCollectionDefinition := range c.Collect {
+		//parse event_type
 		var eventType string
-		if metricSetDef.EventType == "" {
+		if parsedCollectionDefinition.EventType == "" {
 			eventType = "SNMPSample"
 		} else {
-			eventType = metricSetDef.EventType
+			eventType = parsedCollectionDefinition.EventType
+		}
+
+		//parse scalar_metrics if any
+		var scalarMetricDefinitions []*metricDefinition
+		var newMetricDefinition *metricDefinition
+		for _, parsedMetricDefinition := range parsedCollectionDefinition.ScalarMetrics {
+			newMetricDefinition = &metricDefinition{
+				metricName: parsedMetricDefinition.MetricName,
+				oid:        parsedMetricDefinition.Oid,
+			}
+			metricTypeString := parsedMetricDefinition.MetricType
+			if metricTypeString == "" {
+				newMetricDefinition.metricType = metric.GAUGE //default metric type
+			} else {
+				mt, ok := metricTypes[metricTypeString]
+				if !ok {
+					return nil, fmt.Errorf("invalid metric type %s", metricTypeString)
+				}
+				newMetricDefinition.metricType = mt
+			}
+			scalarMetricDefinitions = append(scalarMetricDefinitions, newMetricDefinition)
+		}
+
+		//parse inventory metrics if any
+		var inventoryItemDefinitions []*inventoryItemDefinition
+		var newItem *inventoryItemDefinition
+		for _, parsedInventoryItem := range parsedCollectionDefinition.Inventory {
+			newItem = &inventoryItemDefinition{
+				oid:      parsedInventoryItem.Oid,
+				category: parsedInventoryItem.Category,
+				name:     parsedInventoryItem.Name,
+			}
+			inventoryItemDefinitions = append(inventoryItemDefinitions, newItem)
+		}
+
+		// parse table_metrics if any
+		parsedTableDefinition := parsedCollectionDefinition.TableMetrics
+		var indexDefinitions []*indexDefinition
+		var newIndex *indexDefinition
+		var columnDefinitions []*metricDefinition
+		for _, indexOidDef := range parsedTableDefinition.Index {
+			newIndex = &indexDefinition{
+				name: indexOidDef.Name,
+				oid:  indexOidDef.Oid,
+			}
+			indexDefinitions = append(indexDefinitions, newIndex)
+		}
+		for _, parsedTableMetricDefinition := range parsedTableDefinition.Metrics {
+			newMetricDefinition = &metricDefinition{
+				metricName: parsedTableMetricDefinition.MetricName,
+				oid:        parsedTableMetricDefinition.Oid,
+			}
+			metricTypeString := parsedTableMetricDefinition.MetricType
+			if metricTypeString == "" {
+				newMetricDefinition.metricType = metric.GAUGE
+			} else {
+				mt, ok := metricTypes[metricTypeString]
+				if !ok {
+					return nil, fmt.Errorf("invalid metric type %s", metricTypeString)
+				}
+				newMetricDefinition.metricType = mt
+			}
+			columnDefinitions = append(columnDefinitions, newMetricDefinition)
+		}
+		tableDefinition := tableDefinition{
+			rootOid:           parsedTableDefinition.RootOid,
+			indexDefinitions:  indexDefinitions,
+			columnDefinitions: columnDefinitions,
 		}
 		collections = append(collections,
-			&descDefinition{eventType: eventType, scalarMetrics: scalarMetrics},
-			&descDefinition{eventType: eventType, tableDefinition: tableDefinition})
+			&collectionDefinition{
+				eventType:               eventType,
+				scalarMetrics:           scalarMetricDefinitions,
+				tableDefinition:         tableDefinition,
+				inventoryItemDefinition: inventoryItemDefinitions,
+			})
 	}
 
 	return collections, nil
