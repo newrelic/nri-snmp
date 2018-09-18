@@ -6,13 +6,13 @@
 # refer to the Integrations SDK documentation:
 # https://docs.newrelic.com/docs/integrations/integrations-sdk/file-specifications
 
-integration_name: com.newrelic.nri-snmp
+integration_name: com.newrelic.snmp
 
 instances:
-  - name: nri-snmp
+  - name: snmp
     command: all_data
     arguments:
-      hostname: localhost
-      port: 161
+      snmp_host: localhost
+      snmp_port: 161
       community: public
-      config_file: snmp-queries.json
+      collection_files: "/etc/newrelic-infra/integrations.d/snmp-sample-metrics.yml"

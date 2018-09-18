@@ -13,8 +13,8 @@ import (
 
 type argumentList struct {
 	sdkArgs.DefaultArgumentList
-	Hostname        string `default:"localhost" help:"Hostname or IP where the SNMP server is running."`
-	Port            int    `default:"161" help:"Port on which SNMP server is listening."`
+	SNMPHost        string `default:"localhost" help:"Hostname or IP where the SNMP server is running."`
+	SNMPPort        int    `default:"161" help:"Port on which SNMP server is listening."`
 	Community       string `default:"public" help:"SNMP Version 2 Community string "`
 	V3              bool   `default:"false" help:"Use SNMP Version 3."`
 	Username        string `default:"" help:"The security name that identifies the SNMPv3 user."`
@@ -33,6 +33,8 @@ var (
 )
 
 var theSNMP *gosnmp.GoSNMP
+var targetHost string
+var targetPort int
 
 func main() {
 	// Create Integration
@@ -42,9 +44,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = connect()
+	targetHost = strings.TrimSpace(args.SNMPHost)
+	targetPort = args.SNMPPort
+	err = connect(targetHost, targetPort)
 	if err != nil {
-		log.Error("Error connecting to snmp server " + args.Hostname)
+		log.Error("Error connecting to snmp server " + targetHost)
 		log.Fatal(err)
 	}
 	defer disconnect()
@@ -66,19 +70,19 @@ func main() {
 		}
 
 		// Parse the yaml file into a raw definition
-		collectionDefinition, err := parseYaml(collectionFile)
+		collectionParser, err := parseYaml(collectionFile)
 		if err != nil {
 			log.Error("Failed to parse collection definition file %s: %s", collectionFile, err)
 			os.Exit(1)
 		}
 
-		// Validate the definition and create a collection object
-		collection, err := parseCollectionDefinition(collectionDefinition)
+		// Validate the definition and create a slice of metricSetDefinitions object
+		metricSetDefinitions, inventoryDefinition, err := parseCollection(collectionParser)
 		if err != nil {
 			log.Error("Failed to parse collection definition %s: %s", collectionFile, err)
 			os.Exit(1)
 		}
-		if err := runCollection(collection, snmpIntegration); err != nil {
+		if err := runCollection(metricSetDefinitions, inventoryDefinition, snmpIntegration); err != nil {
 			log.Error("Failed to complete collection: %s", err)
 		}
 	}

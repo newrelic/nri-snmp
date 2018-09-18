@@ -10,28 +10,29 @@ import (
 	"github.com/soniah/gosnmp"
 )
 
-func runCollection(collections []*collectionDefinition, i *integration.Integration) error {
-	for _, collection := range collections {
-		eventType := collection.eventType
-		scalarMetrics := collection.scalarMetrics
-		if len(scalarMetrics) > 0 {
-			populateScalarMetrics(eventType, scalarMetrics, i)
-		}
-		inventoryItems := collection.inventoryItemDefinition
-		if len(inventoryItems) > 0 {
-			populateInventory(eventType, inventoryItems, i)
-		}
-		tableDefinition := collection.tableDefinition
-		if len(tableDefinition.columnDefinitions) > 0 {
-			populateTableMetrics(eventType, tableDefinition, i)
+func runCollection(metricSetDefinitions []*metricSetDefinition, inventoryDefinitions []*inventoryItemDefinition, i *integration.Integration) error {
+	for _, metricSetDefinition := range metricSetDefinitions {
+		eventType := metricSetDefinition.EventType
+		metricSetType := metricSetDefinition.Type
+		switch metricSetType {
+		case "scalar":
+			populateScalarMetrics(eventType, metricSetDefinition.Metrics, i)
+		case "table":
+			rootOid := metricSetDefinition.RootOid
+			indexDefinitions := metricSetDefinition.Index
+			populateTableMetrics(eventType, rootOid, indexDefinitions, metricSetDefinition.Metrics, i)
+		default:
+			log.Error("Invalid type for metric_set: %s", metricSetType)
 		}
 	}
+	populateInventory(inventoryDefinitions, i)
+
 	return nil
 }
 
 func populateScalarMetrics(eventType string, metricDefinitions []*metricDefinition, i *integration.Integration) error {
 	// Create an entity for the host
-	e, err := i.Entity(args.Hostname, "host")
+	e, err := i.Entity(targetHost, "host")
 	if err != nil {
 		return err
 	}
@@ -57,11 +58,13 @@ func populateScalarMetrics(eventType string, metricDefinitions []*metricDefiniti
 	return nil
 }
 
-func populateTableMetrics(eventType string, tableDefinition tableDefinition, i *integration.Integration) error {
+func populateTableMetrics(eventType string, rootOid string, indexDefinitions []*indexDefinition, metricDefinitions []*metricDefinition, i *integration.Integration) error {
 	var err error
-	tableOid := tableDefinition.rootOid
-	indices := tableDefinition.indexDefinitions
-	metricDefinition := tableDefinition.columnDefinitions
+	// Create an entity for the host
+	e, err := i.Entity(targetHost, "host")
+	if err != nil {
+		return err
+	}
 
 	indexKeys := make(map[string]struct{}) // "Set" datastructure
 	var exists = struct{}{}
@@ -71,8 +74,8 @@ func populateTableMetrics(eventType string, tableDefinition tableDefinition, i *
 
 	snmpWalkCallback := func(pdu gosnmp.SnmpPDU) error {
 		oid := strings.TrimSpace(pdu.Name)
-		for _, index := range indices {
-			indexKeyPattern := index.oid + "\\.(.*)"
+		for _, indexDefinition := range indexDefinitions {
+			indexKeyPattern := indexDefinition.oid + "\\.(.*)"
 			re, err := regexp.Compile(indexKeyPattern)
 			if err != nil {
 				return err
@@ -95,14 +98,14 @@ func populateTableMetrics(eventType string, tableDefinition tableDefinition, i *
 					indexMap = make(map[string]string)
 					indexAttributeMaps[indexKey] = indexMap
 				}
-				indexMap[index.name] = indexValue
+				indexMap[indexDefinition.name] = indexValue
 				return nil
 			}
 		}
 		metrics[oid] = pdu
 		return nil
 	}
-	err = theSNMP.BulkWalk(tableOid, snmpWalkCallback)
+	err = theSNMP.BulkWalk(rootOid, snmpWalkCallback)
 	if err != nil {
 		log.Error("SNMP Walk Error")
 		return err
@@ -114,11 +117,6 @@ func populateTableMetrics(eventType string, tableDefinition tableDefinition, i *
 		if !ok {
 			continue
 		}
-		// Create an entity for the host
-		e, err := i.Entity(args.Hostname, "host")
-		if err != nil {
-			return err
-		}
 		ms := e.NewMetricSet(eventType)
 		for indexName, indexValue := range indexMap {
 			err = ms.SetMetric(indexName, indexValue, metric.ATTRIBUTE)
@@ -126,7 +124,7 @@ func populateTableMetrics(eventType string, tableDefinition tableDefinition, i *
 		if err != nil {
 			log.Error(err.Error())
 		}
-		for _, metricDefinition := range metricDefinition {
+		for _, metricDefinition := range metricDefinitions {
 			baseOid := strings.TrimSpace(metricDefinition.oid)
 			metricName := metricDefinition.metricName
 			sourceType := metricDefinition.metricType
@@ -201,18 +199,19 @@ func processSNMPValue(pdu gosnmp.SnmpPDU, metricDefinitionMap map[string]*metric
 		if err != nil {
 			log.Error(err.Error())
 		}
+	} else {
+		log.Info("Null value for OID[" + oid + "]")
 	}
 
 	return nil
 }
 
-func populateInventory(eventType string, inventoryItems []*inventoryItemDefinition, i *integration.Integration) error {
+func populateInventory(inventoryItems []*inventoryItemDefinition, i *integration.Integration) error {
 	// Create an entity for the host
-	e, err := i.Entity(args.Hostname, "host")
+	e, err := i.Entity(targetHost, "host")
 	if err != nil {
 		return err
 	}
-
 	var oids []string
 	inventoryOidMap := make(map[string]*inventoryItemDefinition)
 	for _, inventoryItem := range inventoryItems {
@@ -258,6 +257,8 @@ func populateInventory(eventType string, inventoryItems []*inventoryItemDefiniti
 			if err != nil {
 				log.Error(err.Error())
 			}
+		} else {
+			log.Info("Null value for OID[" + oid + "]")
 		}
 		if err != nil {
 			log.Error("SNMP Error processing inventory variable "+variable.Name, err)

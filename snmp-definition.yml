@@ -6,8 +6,8 @@
 # refer to the Integrations SDK documentation:
 # https://docs.newrelic.com/docs/integrations/integrations-sdk/file-specifications
 
-name: com.newrelic.nri-snmp
-description: Reports status and metrics for nri-snmp service
+name: com.newrelic.snmp
+description: Reports status and metrics for SNMP service
 protocol_version: 1
 os: linux
 

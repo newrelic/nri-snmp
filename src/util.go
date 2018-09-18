@@ -10,13 +10,11 @@ import (
 	"github.com/soniah/gosnmp"
 )
 
-func connect() error {
-	target := strings.TrimSpace(args.Hostname)
-
+func connect(targetHost string, targetPort int) error {
 	if args.V3 {
 		theSNMP = &gosnmp.GoSNMP{
-			Target:        target,
-			Port:          uint16(args.Port),
+			Target:        targetHost,
+			Port:          uint16(targetPort),
 			Version:       gosnmp.Version3,
 			Timeout:       time.Duration(30) * time.Second,
 			SecurityModel: gosnmp.UserSecurityModel,
@@ -31,8 +29,8 @@ func connect() error {
 	} else {
 		community := strings.TrimSpace(args.Community)
 		theSNMP = &gosnmp.GoSNMP{
-			Target:    target,
-			Port:      uint16(args.Port),
+			Target:    targetHost,
+			Port:      uint16(targetPort),
 			Version:   gosnmp.Version2c,
 			Community: community,
 			Timeout:   time.Duration(10 * time.Second), // Timeout better suited to walking
@@ -46,18 +44,14 @@ func connect() error {
 		os.Exit(1)
 		return err
 	}
-	log.Info("SNMP target: " + target)
+	log.Info("SNMP target: " + targetHost)
 	return nil
 }
 
 func disconnect() {
-	target := strings.TrimSpace(args.Hostname)
 	err := theSNMP.Conn.Close()
 	if err != nil {
-		log.Error("Error disconnecting from SNMP server")
 		log.Fatal(err)
-	} else {
-		log.Debug("Disconnected from " + target)
 	}
 }
 
