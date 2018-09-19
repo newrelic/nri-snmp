@@ -18,13 +18,15 @@ type argumentList struct {
 	Community       string `default:"public" help:"SNMP Version 2 Community string "`
 	V3              bool   `default:"false" help:"Use SNMP Version 3."`
 	Username        string `default:"" help:"The security name that identifies the SNMPv3 user."`
+	AuthProtocol    string `default:"MD5" help:"The algorithm used for SNMPv3 authentication."`
 	AuthPassphrase  string `default:"" help:"The password used to generate the key used for SNMPv3 authentication."`
+	PrivProtocol    string `default:"AES" help:"The algorithm used for SNMPv3 message integrity."`
 	PrivPassphrase  string `default:"" help:"The password used to generate the key used to verify SNMPv3 message integrity."`
 	CollectionFiles string `default:"" help:"A comma separated list of full paths to metrics configuration files"`
 }
 
 const (
-	integrationName    = "com.newrelic.nri-snmp"
+	integrationName    = "com.newrelic.snmp"
 	integrationVersion = "1.0.0"
 )
 

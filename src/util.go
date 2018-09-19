@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -12,17 +11,41 @@ import (
 
 func connect(targetHost string, targetPort int) error {
 	if args.V3 {
+		msgFlags := gosnmp.AuthPriv
+		authProtocol := gosnmp.MD5
+		if args.AuthProtocol == "MD5" {
+			authProtocol = gosnmp.MD5
+		} else if args.AuthProtocol == "SHA" {
+			authProtocol = gosnmp.SHA
+		} else {
+			log.Error("Invalid auth_protocol. Using MD5")
+		}
+		privProtocol := gosnmp.AES
+		if args.AuthProtocol == "AES" {
+			privProtocol = gosnmp.AES
+		} else if args.AuthProtocol == "DES" {
+			privProtocol = gosnmp.DES
+		} else {
+			log.Error("Invalid priv_protocol. Using AES")
+		}
+		if (args.AuthPassphrase != "") && (args.PrivPassphrase != "") {
+			msgFlags = gosnmp.AuthPriv
+		} else if (args.AuthPassphrase != "") && (args.PrivPassphrase == "") {
+			msgFlags = gosnmp.AuthNoPriv
+		} else if (args.AuthPassphrase == "") && (args.PrivPassphrase == "") {
+			msgFlags = gosnmp.NoAuthNoPriv
+		}
 		theSNMP = &gosnmp.GoSNMP{
 			Target:        targetHost,
 			Port:          uint16(targetPort),
 			Version:       gosnmp.Version3,
-			Timeout:       time.Duration(30) * time.Second,
+			Timeout:       time.Duration(10) * time.Second,
 			SecurityModel: gosnmp.UserSecurityModel,
-			MsgFlags:      gosnmp.AuthPriv,
+			MsgFlags:      msgFlags,
 			SecurityParameters: &gosnmp.UsmSecurityParameters{UserName: args.Username,
-				AuthenticationProtocol:   gosnmp.SHA,
+				AuthenticationProtocol:   authProtocol,
 				AuthenticationPassphrase: args.AuthPassphrase,
-				PrivacyProtocol:          gosnmp.DES,
+				PrivacyProtocol:          privProtocol,
 				PrivacyPassphrase:        args.PrivPassphrase,
 			},
 		}
@@ -40,7 +63,7 @@ func connect(targetHost string, targetPort int) error {
 
 	err := theSNMP.Connect()
 	if err != nil {
-		log.Error("Connect error")
+		log.Error("Connect error %v", err)
 		os.Exit(1)
 		return err
 	}
@@ -50,13 +73,6 @@ func connect(targetHost string, targetPort int) error {
 
 func disconnect() {
 	err := theSNMP.Conn.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func close(c io.Closer) {
-	err := c.Close()
 	if err != nil {
 		log.Fatal(err)
 	}

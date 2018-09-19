@@ -55,19 +55,6 @@ type inventoryParser struct {
 
 // End of parser defs
 
-// collectionDefinition is a validated and simplified
-// representation of the requested collection parameters
-// from a single collection
-type collectionDefinition struct {
-	dataSetDefinitions []*dataSetDefinition
-}
-
-// dataSetDefinition is a validated and simplified
-// representation of the requested dataset
-type dataSetDefinition struct {
-	metricSetDefinitions []*metricSetDefinition
-}
-
 // metricSetDefinition is a validated and simplified
 // representation of the requested dataset
 type metricSetDefinition struct {

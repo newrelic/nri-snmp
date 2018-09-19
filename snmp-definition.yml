@@ -25,7 +25,7 @@ commands:
     command:
       - ./bin/nr-snmp
       - --inventory
-    prefix: config/nr-snmp
+    prefix: config/snmp
     interval: 30
   events:
     command:

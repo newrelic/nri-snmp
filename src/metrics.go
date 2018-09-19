@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -16,17 +17,25 @@ func runCollection(metricSetDefinitions []*metricSetDefinition, inventoryDefinit
 		metricSetType := metricSetDefinition.Type
 		switch metricSetType {
 		case "scalar":
-			populateScalarMetrics(eventType, metricSetDefinition.Metrics, i)
+			err := populateScalarMetrics(eventType, metricSetDefinition.Metrics, i)
+			if err != nil {
+				log.Error("Error populating scalar metrics. %v", err)
+			}
 		case "table":
 			rootOid := metricSetDefinition.RootOid
 			indexDefinitions := metricSetDefinition.Index
-			populateTableMetrics(eventType, rootOid, indexDefinitions, metricSetDefinition.Metrics, i)
+			err := populateTableMetrics(eventType, rootOid, indexDefinitions, metricSetDefinition.Metrics, i)
+			if err != nil {
+				log.Error("Error populating table metrics. %v", err)
+			}
 		default:
 			log.Error("Invalid type for metric_set: %s", metricSetType)
 		}
 	}
-	populateInventory(inventoryDefinitions, i)
-
+	err := populateInventory(inventoryDefinitions, i)
+	if err != nil {
+		log.Error("Error populating inventory. %s", err)
+	}
 	return nil
 }
 
@@ -46,8 +55,7 @@ func populateScalarMetrics(eventType string, metricDefinitions []*metricDefiniti
 	}
 	snmpGetResult, err := theSNMP.Get(oids)
 	if err != nil {
-		log.Error("SNMP Get Error %s", err)
-		return err
+		return fmt.Errorf("SNMP Get Error %s", err)
 	}
 	for _, variable := range snmpGetResult.Variables {
 		err = processSNMPValue(variable, metricDefinitionMap, ms)
@@ -107,7 +115,6 @@ func populateTableMetrics(eventType string, rootOid string, indexDefinitions []*
 	}
 	err = theSNMP.BulkWalk(rootOid, snmpWalkCallback)
 	if err != nil {
-		log.Error("SNMP Walk Error")
 		return err
 	}
 
@@ -174,6 +181,10 @@ func processSNMPValue(pdu gosnmp.SnmpPDU, metricDefinitionMap map[string]*metric
 		}
 		sourceType = metricDefinition.metricType
 	} else {
+		errorMessage, ok := allerrors[oid]
+		if ok {
+			return fmt.Errorf("Error Message: %s", errorMessage)
+		}
 		log.Error("OID not configured in metricDefinitions and will not be reported[" + oid + "]")
 		return nil
 	}
@@ -222,7 +233,6 @@ func populateInventory(inventoryItems []*inventoryItemDefinition, i *integration
 
 	snmpGetResult, err := theSNMP.Get(oids)
 	if err != nil {
-		log.Error("SNMP Get error fetching inventory items", err)
 		return err
 	}
 	for _, variable := range snmpGetResult.Variables {
@@ -236,6 +246,10 @@ func populateInventory(inventoryItems []*inventoryItemDefinition, i *integration
 			name = itemDefinition.name
 			category = itemDefinition.category
 		} else {
+			errorMessage, ok := allerrors[oid]
+			if ok {
+				return fmt.Errorf("Error Message: %s", errorMessage)
+			}
 			log.Error("OID not configured in inventoryDefinitions and will not be reported[" + oid + "]")
 			continue
 		}
@@ -265,4 +279,11 @@ func populateInventory(inventoryItems []*inventoryItemDefinition, i *integration
 		}
 	}
 	return nil
+}
+
+var allerrors = map[string]string{
+	".1.3.6.1.6.3.15.1.1.3.0": "oidUsmStatsUnknownUserNames",
+	".1.3.6.1.6.3.15.1.1.4.0": "oidUsmStatsUnknownEngineIDs",
+	".1.3.6.1.6.3.15.1.1.5.0": "oidUsmStatsWrongDigests",
+	".1.3.6.1.6.3.15.1.1.6.0": "oidUsmStatsDecryptionErrors",
 }
