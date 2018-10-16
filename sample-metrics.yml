@@ -1,46 +1,43 @@
-
-collect:
-  - data_set: nr-snmp-sample
-  # Sample dataset for New Relic SNMP test application
-    metric_sets:
-      - type: scalar
-        event_type: WeatherSample # When unspecified, defaults to SNMPSample
-        metrics:
-          # Collect all scalar OIDs described below
-          - oid: .1.3.6.1.4.1.52032.1.1.1.0 
-            # When unspecified, the metric_type is inferred
-            # and the metric name is just the OID name
-          - oid: .1.3.6.1.4.1.52032.1.1.2.0 
-            metric_type: gauge
-            metric_name: invocationCount
-          - oid: .1.3.6.1.4.1.52032.1.1.3.0 
-            metric_type: attribute
-            metric_name: deviceDescription
-      - type: table
-        event_type: CityWeatherSample
-        # The table metrics for each row will be reported as a metric set.
-        root_oid: .1.3.6.1.4.1.52032.1.2.1
-        # Table Root OID for starting SNMP walk
+collect: 
+  - 
+    device: 
+    metric_sets: 
+      - 
+        event_type: SNMPSample
+        metrics: 
+          - 
+            metric_name: newrelicExampleInteger
+            oid: .1.3.6.1.4.1.52032.1.1.1.0
+          - 
+            metric_name: newrelicExampleSleeper
+            oid: .1.3.6.1.4.1.52032.1.1.2.0
+          - 
+            metric_name: newrelicExampleString
+            oid: .1.3.6.1.4.1.52032.1.1.3.0
+        name: scalarMetricSet
+        type: scalar
+      - 
+        event_type: SNMPTableSample
         index: 
-        # Table column OID that helps identify rows 
-          - oid: .1.3.6.1.4.1.52032.1.2.1.1.1
-            name: city
-          - oid: .1.3.6.1.4.1.52032.1.2.1.1.6
-            name: country 
-        metrics:
-        # Table column OIDs that should be collected as metric
-          - oid: .1.3.6.1.4.1.52032.1.2.1.1.2 
-            metric_type: gauge
+          - 
+            metric_name: cityName
+            oid: .1.3.6.1.4.1.52032.1.2.1.1.1
+        metrics: 
+          - 
             metric_name: temperature
-          - oid: .1.3.6.1.4.1.52032.1.2.1.1.3 
-          # When unspecified, the metric_type is inferred
-          # and the metric name is just the OID name
-          - oid: .1.3.6.1.4.1.52032.1.2.1.1.4
-            metric_type: gauge
+            oid: .1.3.6.1.4.1.52032.1.2.1.1.2
+          - 
+            metric_name: humidity
+            oid: .1.3.6.1.4.1.52032.1.2.1.1.3
+          - 
             metric_name: wind
-          - oid: .1.3.6.1.4.1.52032.1.2.1.1.4
-            metric_type: attribute
+            oid: .1.3.6.1.4.1.52032.1.2.1.1.4
+          - 
             metric_name: windDirection
+            oid: .1.3.6.1.4.1.52032.1.2.1.1.5
+        name: cityWeatherTable
+        root_oid: .1.3.6.1.4.1.52032.1.2.1
+        type: table
     inventory:
       - oid: .1.3.6.1.4.1.52032.1.1.4.0 
         category: weather

@@ -53,6 +53,11 @@ func populateScalarMetrics(eventType string, metricDefinitions []*metricDefiniti
 		oids = append(oids, oid)
 		metricDefinitionMap[oid] = metricDefinition
 	}
+
+	if len(oids) == 0 {
+		return nil
+	}
+
 	snmpGetResult, err := theSNMP.Get(oids)
 	if err != nil {
 		return fmt.Errorf("SNMP Get Error %s", err)
@@ -92,14 +97,21 @@ func populateTableMetrics(eventType string, rootOid string, indexDefinitions []*
 			if len(matches) > 1 {
 				indexKey := matches[1]
 				indexKeys[indexKey] = exists
-				indexValue := "unknown"
+				indexValue := ""
 				switch pdu.Type {
 				case gosnmp.OctetString:
 					indexValue = string(pdu.Value.([]byte))
-				case gosnmp.Gauge32, gosnmp.Counter32:
+				case gosnmp.Gauge32, gosnmp.Counter32, gosnmp.Counter64, gosnmp.Integer:
 					indexValue = gosnmp.ToBigInt(pdu.Value).String()
+				case gosnmp.Null:
+					err = fmt.Errorf("Null value for table index: [" + oid + "]")
+					return err
+				case gosnmp.NoSuchObject, gosnmp.NoSuchInstance:
+					err = fmt.Errorf("No such table index: [%s]", oid)
+					return err
 				default:
-					log.Error("Unsupported index value type")
+					err = fmt.Errorf("Unsupported table index value type OID[%s]", oid)
+					return err
 				}
 				indexMap, ok := indexAttributeMaps[indexKey]
 				if !ok {
@@ -146,19 +158,28 @@ func populateTableMetrics(eventType string, rootOid string, indexDefinitions []*
 			case gosnmp.OctetString:
 				value = string(pdu.Value.([]byte))
 				sourceType = metric.ATTRIBUTE
-				log.Error("This plugin will always report OctetString values as ATTRIBUTE source type [" + metricName + "]")
-			case gosnmp.Gauge32, gosnmp.Counter32:
-				value = gosnmp.ToBigInt(pdu.Value)
+				//log.Error("This plugin will always report OctetString values as ATTRIBUTE source type [" + metricName + "]")
+			case gosnmp.Gauge32, gosnmp.Counter32, gosnmp.Counter64, gosnmp.Integer:
 				if sourceType == metric.ATTRIBUTE {
 					value = gosnmp.ToBigInt(pdu.Value).String()
+				} else {
+					value = gosnmp.ToBigInt(pdu.Value)
 				}
+			case gosnmp.Null:
+				log.Error("Null value for OID[" + oid + "]")
+			case gosnmp.NoSuchObject, gosnmp.NoSuchInstance:
+				log.Error("No such object, table index[" + oid + "]")
 			default:
 				value = pdu.Value
 				if sourceType == metric.ATTRIBUTE {
 					value = gosnmp.ToBigInt(pdu.Value).String()
+				} else {
+					value = gosnmp.ToBigInt(pdu.Value)
 				}
 			}
-			err = ms.SetMetric(metricName, value, sourceType)
+			if value != nil {
+				err = ms.SetMetric(metricName, value, sourceType)
+			}
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -193,12 +214,17 @@ func processSNMPValue(pdu gosnmp.SnmpPDU, metricDefinitionMap map[string]*metric
 	case gosnmp.OctetString:
 		value = string(pdu.Value.([]byte))
 		sourceType = metric.ATTRIBUTE
-	case gosnmp.Gauge32, gosnmp.Counter32:
+	case gosnmp.Gauge32, gosnmp.Counter32, gosnmp.Counter64, gosnmp.Integer:
 		value = gosnmp.ToBigInt(pdu.Value)
 		if sourceType == metric.ATTRIBUTE {
 			value = gosnmp.ToBigInt(pdu.Value).String()
 		}
+	case gosnmp.Null:
+		log.Info("Null value for OID[" + oid + "]")
+	case gosnmp.NoSuchObject, gosnmp.NoSuchInstance:
+		log.Info("No such object, OID[" + oid + "]")
 	default:
+		log.Error("Unsupported PDU type, will try to cast to string %v", pdu.Type)
 		value = pdu.Value
 		if sourceType == metric.ATTRIBUTE {
 			value = gosnmp.ToBigInt(pdu.Value).String()
@@ -210,8 +236,6 @@ func processSNMPValue(pdu gosnmp.SnmpPDU, metricDefinitionMap map[string]*metric
 		if err != nil {
 			log.Error(err.Error())
 		}
-	} else {
-		log.Info("Null value for OID[" + oid + "]")
 	}
 
 	return nil
@@ -229,6 +253,10 @@ func populateInventory(inventoryItems []*inventoryItemDefinition, i *integration
 		oid := strings.TrimSpace(inventoryItem.oid)
 		oids = append(oids, oid)
 		inventoryOidMap[oid] = inventoryItem
+	}
+
+	if len(oids) == 0 {
+		return nil
 	}
 
 	snmpGetResult, err := theSNMP.Get(oids)

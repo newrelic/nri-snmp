@@ -42,7 +42,7 @@ type metricParser struct {
 // parsing of a collection yaml file
 type indexParser struct {
 	Oid  string `yaml:"oid"`
-	Name string `yaml:"name"`
+	Name string `yaml:"metric_name"`
 }
 
 // inventoryParser is a struct to aid the automatic
