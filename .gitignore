@@ -4,8 +4,10 @@
 bin/
 coverage.xml
 *.exe
-vendor/*/
-!vendor/vendor.json
+
+#Check in vendor folder as jenkins build fails without it
+#vendor/*/
+#!vendor/vendor.json
 
 
 # OS generated files #
