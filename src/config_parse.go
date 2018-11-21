@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/newrelic/infra-integrations-sdk/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -23,6 +22,7 @@ type collectionParser struct {
 // metricSetParser is a struct to aid the automatic
 // parsing of a collection yaml file
 type metricSetParser struct {
+	Name      string         `yaml:"name"`
 	Type      string         `yaml:"type"`
 	EventType string         `yaml:"event_type"`
 	Metrics   []metricParser `yaml:"metrics"`
@@ -58,6 +58,7 @@ type inventoryParser struct {
 // metricSetDefinition is a validated and simplified
 // representation of the requested dataset
 type metricSetDefinition struct {
+	Name      string
 	Type      string
 	EventType string
 	Metrics   []*metricDefinition
@@ -71,7 +72,7 @@ type metricSetDefinition struct {
 type metricDefinition struct {
 	oid        string
 	metricName string
-	metricType metric.SourceType
+	metricType metricSourceType
 }
 
 // indexDefinition is a storage struct containing
@@ -91,12 +92,23 @@ type inventoryItemDefinition struct {
 
 var (
 	// metricTypes maps the string used in yaml to a metric type
-	metricTypes = map[string]metric.SourceType{
-		"gauge":     metric.GAUGE,
-		"delta":     metric.DELTA,
-		"attribute": metric.ATTRIBUTE,
-		"rate":      metric.RATE,
+	metricTypes = map[string]metricSourceType{
+		"auto":      auto,
+		"gauge":     gauge,
+		"delta":     delta,
+		"attribute": attribute,
+		"rate":      rate,
 	}
+)
+
+type metricSourceType int
+
+const (
+	auto      metricSourceType = 1
+	gauge     metricSourceType = 2
+	delta     metricSourceType = 3
+	rate      metricSourceType = 4
+	attribute metricSourceType = 5
 )
 
 // parseYaml reads a yaml file and parses it into a collectionParser.
@@ -105,13 +117,13 @@ func parseYaml(filename string) (*collectionParser, error) {
 	// Read the file
 	yamlFile, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Error("failed to open %s: %s", filename, err)
+		log.Error("Failed to open %s: %s", filename, err)
 		return nil, err
 	}
 	// Parse the file
 	var c collectionParser
 	if err := yaml.Unmarshal(yamlFile, &c); err != nil {
-		log.Error("failed to parse collection: %s", err)
+		log.Error("Failed to parse collection: %s", err)
 		return nil, err
 	}
 	return &c, nil
@@ -125,6 +137,7 @@ func parseCollection(c *collectionParser) ([]*metricSetDefinition, []*inventoryI
 	for _, dataSet := range c.Collect {
 		var newMetricSetDefinition *metricSetDefinition
 		for _, metricSetParser := range dataSet.MetricSets {
+			name := strings.TrimSpace(metricSetParser.Name)
 			eventType := strings.TrimSpace(metricSetParser.EventType)
 			metricSetType := strings.TrimSpace(metricSetParser.Type)
 			metricParsers := metricSetParser.Metrics
@@ -137,11 +150,11 @@ func parseCollection(c *collectionParser) ([]*metricSetDefinition, []*inventoryI
 				}
 				metricTypeString := metricParser.MetricType
 				if metricTypeString == "" {
-					newMetricDefinition.metricType = metric.GAUGE //default metric type
+					newMetricDefinition.metricType = auto
 				} else {
 					mt, ok := metricTypes[metricTypeString]
 					if !ok {
-						return nil, nil, fmt.Errorf("invalid metric type %s", metricTypeString)
+						return nil, nil, fmt.Errorf("Invalid metric type %s", metricTypeString)
 					}
 					newMetricDefinition.metricType = mt
 				}
@@ -159,6 +172,7 @@ func parseCollection(c *collectionParser) ([]*metricSetDefinition, []*inventoryI
 			}
 			rootOID := strings.TrimSpace(metricSetParser.RootOid)
 			newMetricSetDefinition = &metricSetDefinition{
+				Name:      name,
 				Type:      metricSetType,
 				EventType: eventType,
 				Metrics:   metricDefinitions,
