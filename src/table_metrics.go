@@ -99,7 +99,7 @@ func extractIndexValue(pdu gosnmp.SnmpPDU) (string, error) {
 			indexValue = string(v)
 			return indexValue, nil
 		}
-		return "", fmt.Errorf("Unable to assert OctetString as []byte, Oid[" + pdu.Name + "]")
+		return "", fmt.Errorf("unable to assert OctetString as []byte, Oid[" + pdu.Name + "]")
 	case gosnmp.Gauge32, gosnmp.Counter32, gosnmp.Counter64, gosnmp.Integer, gosnmp.Uinteger32:
 		indexValue = gosnmp.ToBigInt(pdu.Value).String()
 		return indexValue, nil
@@ -108,20 +108,22 @@ func extractIndexValue(pdu gosnmp.SnmpPDU) (string, error) {
 			indexValue = v
 			return indexValue, nil
 		}
-		return "", fmt.Errorf("Unable to assert ObjectIdentifier or IPAddress as string, Oid[" + pdu.Name + "]")
+		return "", fmt.Errorf("unable to assert ObjectIdentifier or IPAddress as string, Oid[" + pdu.Name + "]")
 	case gosnmp.Boolean:
-		return "", fmt.Errorf("Unsupported PDU type for index. %v", pdu.Type)
+		return "", fmt.Errorf("unsupported PDU type[Boolean] for index")
 	case gosnmp.BitString:
-		return "", fmt.Errorf("Unsupported PDU type for index. %v", pdu.Type)
+		return "", fmt.Errorf("unsupported PDU type[Boolean] for index")
 	case gosnmp.TimeTicks:
-		return "", fmt.Errorf("Unsupported PDU type for index. %v", pdu.Type)
-	case gosnmp.OpaqueFloat, gosnmp.OpaqueDouble:
-		return "", fmt.Errorf("Unsupported PDU type for index. %v", pdu.Type)
+		return "", fmt.Errorf("unsupported PDU type[Boolean] for index")
+	case gosnmp.OpaqueFloat:
+		return fmt.Sprintf("%f", float64(pdu.Value.(float32))), nil
+	case gosnmp.OpaqueDouble:
+		return fmt.Sprintf("%f", pdu.Value.(float64)), nil
 	case gosnmp.Null:
-		return "", fmt.Errorf("Null value for table index: [" + pdu.Name + "]")
+		return "", fmt.Errorf("null value for table index: [" + pdu.Name + "]")
 	case gosnmp.NoSuchObject, gosnmp.NoSuchInstance:
-		return "", fmt.Errorf("No such table index: [%v]", pdu.Name)
+		return "", fmt.Errorf("no such table index: [%v]", pdu.Name)
 	default:
-		return "", fmt.Errorf("Unsupported table index type[%v] for OID[%v]", pdu.Type, pdu.Name)
+		return "", fmt.Errorf("unsupported table index type[%v] for OID[%v]", pdu.Type, pdu.Name)
 	}
 }

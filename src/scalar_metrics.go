@@ -38,15 +38,34 @@ func populateScalarMetrics(name string, eventType string, metricDefinitions []*m
 	if len(oids) == 0 {
 		return nil
 	}
+	if len(oids) > 200 {
+		log.Error("A metric set may not contain more than 200 metrics. Only the first 200 will be queried")
+		oids = oids[:200]
+	}
 
 	snmpGetResult, err := theSNMP.Get(oids)
 	if err != nil {
 		return fmt.Errorf("SNMPGet Error %v", err)
 	}
+
+	// SNMPv1 will return packet error for unsupported OIDs.
+	if snmpGetResult.Error == gosnmp.NoSuchName && theSNMP.Version == gosnmp.Version1 {
+		log.Warn("At least one OID not supported by target %s", targetHost)
+	}
+	// Response received with errors.
+	// TODO: "stringify" gosnmp errors instead of showing error code.
+	if snmpGetResult.Error != gosnmp.NoError {
+		return fmt.Errorf("Error reported by target %s: Error Status %d", targetHost, snmpGetResult.Error)
+	}
+
 	for _, variable := range snmpGetResult.Variables {
+		if variable.Type == gosnmp.NoSuchObject || variable.Type == gosnmp.NoSuchInstance {
+			log.Warn("OID %s not supported by target %s", variable.Name, targetHost)
+			continue
+		}
 		err = processScalarPDU(variable, metricDefinitionMap, ms)
 		if err != nil {
-			return fmt.Errorf("Error processing %s. %v", variable.Name, err)
+			return fmt.Errorf("Error processing OID %s. %v", variable.Name, err)
 		}
 	}
 	return nil
@@ -61,7 +80,7 @@ func processScalarPDU(pdu gosnmp.SnmpPDU, metricDefinitionMap map[string]*metric
 		if ok {
 			return fmt.Errorf("Error Message: %s", errorMessage)
 		}
-		log.Warn("OID not configured in metricDefinitions and will not be reported[" + oid + "]")
+		log.Warn("Unexpected OID %s recieved")
 		return nil
 	}
 	metricName = metricDefinition.metricName

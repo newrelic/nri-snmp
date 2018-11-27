@@ -31,6 +31,17 @@ func populateInventory(inventoryItems []*inventoryItemDefinition, i *integration
 	if err != nil {
 		return err
 	}
+
+	// SNMPv1 will return packet error for unsupported OIDs.
+	if snmpGetResult.Error == gosnmp.NoSuchName && theSNMP.Version == gosnmp.Version1 {
+		log.Warn("At least one OID not supported by target %s", targetHost)
+	}
+	// Response received with errors.
+	// TODO: "stringify" gosnmp errors instead of showing error code.
+	if snmpGetResult.Error != gosnmp.NoError {
+		return fmt.Errorf("Error reported by target %s: Error Status %d", targetHost, snmpGetResult.Error)
+	}
+
 	for _, variable := range snmpGetResult.Variables {
 		var name string
 		var category string
@@ -46,15 +57,20 @@ func populateInventory(inventoryItems []*inventoryItemDefinition, i *integration
 			if ok {
 				return fmt.Errorf("Error Message: %s", errorMessage)
 			}
-			log.Error("OID not configured in inventoryDefinitions and will not be reported[" + oid + "]")
+			log.Warn("Unexpected OID %s received", oid)
 			continue
 		}
 
 		switch variable.Type {
 		case gosnmp.OctetString:
 			value = string(variable.Value.([]byte))
-		case gosnmp.Gauge32, gosnmp.Counter32:
+		case gosnmp.Gauge32, gosnmp.Counter32, gosnmp.Counter64, gosnmp.Integer, gosnmp.Uinteger32:
 			value = gosnmp.ToBigInt(variable.Value)
+		case gosnmp.ObjectIdentifier, gosnmp.IPAddress:
+			if v, ok := variable.Value.(string); ok {
+				value = v
+			}
+			log.Warn("unable to assert type as string for OID ", variable.Name)
 		default:
 			value = variable.Value
 		}

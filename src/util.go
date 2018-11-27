@@ -1,7 +1,7 @@
 package main
 
 import (
-	"os"
+	"fmt"
 	"strings"
 	"time"
 
@@ -18,7 +18,7 @@ func connect(targetHost string, targetPort int) error {
 		} else if args.AuthProtocol == "SHA" {
 			authProtocol = gosnmp.SHA
 		} else {
-			log.Error("Invalid auth_protocol. Using MD5")
+			log.Error("Invalid auth_protocol %s. Defalting to MD5", authProtocol)
 		}
 		privProtocol := gosnmp.AES
 		if args.AuthProtocol == "AES" {
@@ -26,7 +26,7 @@ func connect(targetHost string, targetPort int) error {
 		} else if args.AuthProtocol == "DES" {
 			privProtocol = gosnmp.DES
 		} else {
-			log.Error("Invalid priv_protocol. Using AES")
+			log.Error("Invalid priv_protocol %s. Defaulting to AES", privProtocol)
 		}
 		if (args.AuthPassphrase != "") && (args.PrivPassphrase != "") {
 			msgFlags = gosnmp.AuthPriv
@@ -64,16 +64,15 @@ func connect(targetHost string, targetPort int) error {
 	err := theSNMP.Connect()
 	if err != nil {
 		log.Error("Connect error %v", err)
-		os.Exit(1)
-		return err
+		return fmt.Errorf("Error connecting to target %s: %s", targetHost, err)
 	}
-	log.Info("SNMP target: " + targetHost)
+	log.Info("Connecting to target: " + targetHost)
 	return nil
 }
 
 func disconnect() {
 	err := theSNMP.Conn.Close()
 	if err != nil {
-		log.Fatal(err)
+		log.Warn("Error disconnecting from target %s: %s", targetHost, err)
 	}
 }

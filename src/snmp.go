@@ -50,8 +50,8 @@ func main() {
 	targetPort = args.SNMPPort
 	err = connect(targetHost, targetPort)
 	if err != nil {
-		log.Error("Error connecting to snmp server " + targetHost)
-		log.Fatal(err)
+		log.Error("Error connecting to snmp server "+targetHost, err)
+		os.Exit(1)
 	}
 	defer disconnect()
 
@@ -67,25 +67,24 @@ func main() {
 
 		// Check that the filepath is an absolute path
 		if !filepath.IsAbs(collectionFile) {
-			log.Error("Invalid metrics collection path %s. Metrics collection files must be specified as absolute paths.", collectionFile)
+			log.Error("invalid metrics collection path %s. Metrics collection files must be specified as absolute paths.", collectionFile)
 			os.Exit(1)
 		}
 
 		// Parse the yaml file into a raw definition
 		collectionParser, err := parseYaml(collectionFile)
 		if err != nil {
-			log.Error("Failed to parse collection definition file %s: %s", collectionFile, err)
+			log.Error("failed to parse collection definition file %s: %s", collectionFile, err)
+			os.Exit(1)
+		}
+		metricSetDefinitions, inventoryDefinition, err := parseCollection(collectionParser)
+		if err != nil {
+			log.Error("failed to parse collection definition %s: %s", collectionFile, err)
 			os.Exit(1)
 		}
 
-		// Validate the definition and create a slice of metricSetDefinitions object
-		metricSetDefinitions, inventoryDefinition, err := parseCollection(collectionParser)
-		if err != nil {
-			log.Error("Failed to parse collection definition %s: %s", collectionFile, err)
-			os.Exit(1)
-		}
 		if err := runCollection(metricSetDefinitions, inventoryDefinition, snmpIntegration); err != nil {
-			log.Error("Failed to complete collection: %s", err)
+			log.Error("failed to complete collection: %s", err)
 		}
 	}
 
