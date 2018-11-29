@@ -9,14 +9,9 @@ import (
 	"github.com/soniah/gosnmp"
 )
 
-func populateInventory(inventoryItems []*inventoryItemDefinition, i *integration.Integration) error {
-	// Create an entity for the host
-	e, err := i.Entity(targetHost, "host")
-	if err != nil {
-		return err
-	}
+func populateInventory(inventoryItems []inventoryItem, entity *integration.Entity) error {
 	var oids []string
-	inventoryOidMap := make(map[string]*inventoryItemDefinition)
+	inventoryOidMap := make(map[string]inventoryItem)
 	for _, inventoryItem := range inventoryItems {
 		oid := strings.TrimSpace(inventoryItem.oid)
 		oids = append(oids, oid)
@@ -53,7 +48,7 @@ func populateInventory(inventoryItems []*inventoryItemDefinition, i *integration
 			name = itemDefinition.name
 			category = itemDefinition.category
 		} else {
-			errorMessage, ok := allerrors[oid]
+			errorMessage, ok := knownErrorOids[oid]
 			if ok {
 				return fmt.Errorf("Error Message: %s", errorMessage)
 			}
@@ -76,7 +71,7 @@ func populateInventory(inventoryItems []*inventoryItemDefinition, i *integration
 		}
 
 		if value != nil {
-			err = e.SetInventoryItem(category, name, value)
+			err = entity.SetInventoryItem(category, name, value)
 			if err != nil {
 				log.Error(err.Error())
 			}

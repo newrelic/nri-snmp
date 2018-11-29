@@ -9,30 +9,33 @@ import (
 	"github.com/soniah/gosnmp"
 )
 
-func runCollection(metricSetDefinitions []*metricSetDefinition, inventoryDefinitions []*inventoryItemDefinition, i *integration.Integration) error {
-	for _, metricSetDefinition := range metricSetDefinitions {
-		eventType := metricSetDefinition.EventType
-		metricSetType := metricSetDefinition.Type
+func runCollection(collection *collection, i *integration.Integration) error {
+	var err error
+	// Create an entity for the host
+	entity, err := i.Entity(targetHost, "host")
+	if err != nil {
+		return err
+	}
+
+	device := collection.Device
+	for _, metricSet := range collection.MetricSets {
+		metricSetType := metricSet.Type
 		switch metricSetType {
 		case "scalar":
-			name := metricSetDefinition.Name
-			err := populateScalarMetrics(name, eventType, metricSetDefinition.Metrics, i)
+			err = populateScalarMetrics(device, metricSet, entity)
 			if err != nil {
-				log.Error("unable to populate metrics for scalar metric set [%s]. %v", name, err)
+				log.Error("unable to populate metrics for scalar metric set [%s]. %v", metricSet.Name, err)
 			}
 		case "table":
-			name := metricSetDefinition.Name
-			rootOid := metricSetDefinition.RootOid
-			indexDefinitions := metricSetDefinition.Index
-			err := populateTableMetrics(name, eventType, rootOid, indexDefinitions, metricSetDefinition.Metrics, i)
+			err = populateTableMetrics(device, metricSet, entity)
 			if err != nil {
-				log.Error("unable to populate metrics for table [%v] %v", rootOid, err)
+				log.Error("unable to populate metrics for table [%v] %v", metricSet.RootOid, err)
 			}
 		default:
 			log.Error("invalid `metric_set` type: %s. check collection file", metricSetType)
 		}
 	}
-	err := populateInventory(inventoryDefinitions, i)
+	err = populateInventory(collection.Inventory, entity)
 	if err != nil {
 		log.Error("unable to populate inventory. %s", err)
 	}

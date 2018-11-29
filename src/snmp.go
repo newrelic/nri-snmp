@@ -77,19 +77,20 @@ func main() {
 			log.Error("failed to parse collection definition file %s: %s", collectionFile, err)
 			os.Exit(1)
 		}
-		metricSetDefinitions, inventoryDefinition, err := parseCollection(collectionParser)
+		collections, err := parseCollection(collectionParser)
 		if err != nil {
 			log.Error("failed to parse collection definition %s: %s", collectionFile, err)
 			os.Exit(1)
 		}
 
-		if err := runCollection(metricSetDefinitions, inventoryDefinition, snmpIntegration); err != nil {
-			log.Error("failed to complete collection: %s", err)
+		for _, collection := range collections {
+			if err := runCollection(collection, snmpIntegration); err != nil {
+				log.Error("failed to complete collection execution: %s", err)
+			}
 		}
 	}
 
 	if err := snmpIntegration.Publish(); err != nil {
 		log.Error(err.Error())
-		os.Exit(1)
 	}
 }

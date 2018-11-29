@@ -13,7 +13,7 @@ import (
 // parsing of a collection yaml file
 type collectionParser struct {
 	Collect []struct {
-		DataSet    string            `yaml:"data_set"`
+		Device     string            `yaml:"device"`
 		MetricSets []metricSetParser `yaml:"metric_sets"`
 		Inventory  []inventoryParser `yaml:"inventory"`
 	}
@@ -55,36 +55,43 @@ type inventoryParser struct {
 
 // End of parser defs
 
-// metricSetDefinition is a validated and simplified
+// fully parsed and validated collection
+type collection struct {
+	Device     string
+	MetricSets []metricSet
+	Inventory  []inventoryItem
+}
+
+// metricSet is a validated and simplified
 // representation of the requested dataset
-type metricSetDefinition struct {
+type metricSet struct {
 	Name      string
 	Type      string
 	EventType string
-	Metrics   []*metricDefinition
+	Metrics   []*metricDef
 	RootOid   string
-	Index     []*indexDefinition
+	Index     []*index
 }
 
-// metricDefinition is a storage struct containing
+// metricDef is a storage struct containing
 // the information of a single metric. It can represent
 // a scalar metric or a table metric
-type metricDefinition struct {
+type metricDef struct {
 	oid        string
 	metricName string
 	metricType metricSourceType
 }
 
-// indexDefinition is a storage struct containing
+// index is a storage struct containing
 // the information representing a table index
-type indexDefinition struct {
+type index struct {
 	oid  string
 	name string
 }
 
-// inventoryItemDefinition is a storage struct containing
+// inventoryItem is a storage struct containing
 // the information of a single inventory item
-type inventoryItemDefinition struct {
+type inventoryItem struct {
 	oid      string
 	category string
 	name     string
@@ -131,66 +138,76 @@ func parseYaml(filename string) (*collectionParser, error) {
 
 // parseCollection takes a raw collectionParser and returns
 // an slice of metricSetDefinition objects containing the validated configuration
-func parseCollection(c *collectionParser) ([]*metricSetDefinition, []*inventoryItemDefinition, error) {
-	var metricSetDefinitions []*metricSetDefinition
-	var inventoryDefinitions []*inventoryItemDefinition
+func parseCollection(c *collectionParser) ([]*collection, error) {
+	var cols []*collection
+	var metricSets []metricSet
+	var inventory []inventoryItem
 	for _, dataSet := range c.Collect {
-		var newMetricSetDefinition *metricSetDefinition
+		var newMetricSet metricSet
 		for _, metricSetParser := range dataSet.MetricSets {
 			name := strings.TrimSpace(metricSetParser.Name)
 			eventType := strings.TrimSpace(metricSetParser.EventType)
 			metricSetType := strings.TrimSpace(metricSetParser.Type)
 			metricParsers := metricSetParser.Metrics
-			var metricDefinitions []*metricDefinition
+			var metrics []*metricDef
 			for _, metricParser := range metricParsers {
-				var newMetricDefinition *metricDefinition
-				newMetricDefinition = &metricDefinition{
+				metricOid := strings.TrimSpace(metricParser.Oid)
+				//force all oids to start with a leading dot indicating abolute oids as required by gosnmp
+				if !strings.HasPrefix(metricOid, ".") {
+					metricOid = "." + metricOid
+				}
+				newMetric := &metricDef{
 					metricName: metricParser.MetricName,
-					oid:        metricParser.Oid,
+					oid:        metricOid,
 				}
 				metricTypeString := metricParser.MetricType
 				if metricTypeString == "" {
-					newMetricDefinition.metricType = auto
+					newMetric.metricType = auto
 				} else {
 					mt, ok := metricTypes[metricTypeString]
 					if !ok {
-						return nil, nil, fmt.Errorf("Invalid metric type %s", metricTypeString)
+						return nil, fmt.Errorf("Invalid metric type %s", metricTypeString)
 					}
-					newMetricDefinition.metricType = mt
+					newMetric.metricType = mt
 				}
-				metricDefinitions = append(metricDefinitions, newMetricDefinition)
+				metrics = append(metrics, newMetric)
 			}
-			var indexDefinitions []*indexDefinition
+			var indexes []*index
 			indexParsers := metricSetParser.Index
 			for _, indexParser := range indexParsers {
-				var newIndexDefinition *indexDefinition
-				newIndexDefinition = &indexDefinition{
+				indexOid := strings.TrimSpace(indexParser.Oid)
+				//force all oids to start with a leading dot indicating abolute oids as required by gosnmp
+				if !strings.HasPrefix(indexOid, ".") {
+					indexOid = "." + indexOid
+				}
+				newIndex := &index{
 					name: indexParser.Name,
 					oid:  indexParser.Oid,
 				}
-				indexDefinitions = append(indexDefinitions, newIndexDefinition)
+				indexes = append(indexes, newIndex)
 			}
 			rootOID := strings.TrimSpace(metricSetParser.RootOid)
-			newMetricSetDefinition = &metricSetDefinition{
+			newMetricSet = metricSet{
 				Name:      name,
 				Type:      metricSetType,
 				EventType: eventType,
-				Metrics:   metricDefinitions,
+				Metrics:   metrics,
 				RootOid:   rootOID,
-				Index:     indexDefinitions,
+				Index:     indexes,
 			}
-			metricSetDefinitions = append(metricSetDefinitions, newMetricSetDefinition)
+			metricSets = append(metricSets, newMetricSet)
 		}
 
-		var newInventoryDefinition *inventoryItemDefinition
 		for _, inventoryParser := range dataSet.Inventory {
-			newInventoryDefinition = &inventoryItemDefinition{
+			newInventoryItem := inventoryItem{
 				oid:      inventoryParser.Oid,
 				category: inventoryParser.Category,
 				name:     inventoryParser.Name,
 			}
-			inventoryDefinitions = append(inventoryDefinitions, newInventoryDefinition)
+			inventory = append(inventory, newInventoryItem)
 		}
+		col := collection{Device: dataSet.Device, MetricSets: metricSets, Inventory: inventory}
+		cols = append(cols, &col)
 	}
-	return metricSetDefinitions, inventoryDefinitions, nil
+	return cols, nil
 }

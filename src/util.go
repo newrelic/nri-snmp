@@ -63,7 +63,7 @@ func connect(targetHost string, targetPort int) error {
 
 	err := theSNMP.Connect()
 	if err != nil {
-		log.Error("Connect error %v", err)
+		log.Error(err.Error())
 		return fmt.Errorf("Error connecting to target %s: %s", targetHost, err)
 	}
 	log.Info("Connecting to target: " + targetHost)

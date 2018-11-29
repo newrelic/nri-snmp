@@ -11,80 +11,96 @@ import (
 	"github.com/soniah/gosnmp"
 )
 
-func populateTableMetrics(tableName string, eventType string, rootOid string, indexDefinitions []*indexDefinition, metricDefinitions []*metricDefinition, i *integration.Integration) error {
+func populateTableMetrics(device string, metricSet metricSet, entity *integration.Entity) error {
 	var err error
-	// Create an entity for the host
-	e, err := i.Entity(targetHost, "host")
-	if err != nil {
-		return err
-	}
-	indexAttributeMaps := make(map[string]map[string]string)
-	metrics := make(map[string]gosnmp.SnmpPDU)
 
+	tableRootOid := metricSet.RootOid
+	if len(metricSet.Index) == 0 {
+		return fmt.Errorf("Table index not specified for table OID `" + tableRootOid + "`")
+	}
+
+	metrics := make(map[string]gosnmp.SnmpPDU)
 	snmpWalkCallback := func(pdu gosnmp.SnmpPDU) error {
 		oid := strings.TrimSpace(pdu.Name)
-		//fmt.Printf("DEBUG: %s = %v\n", oid, pdu.Value)
-		errorMessage, ok := allerrors[oid]
+		errorMessage, ok := knownErrorOids[oid]
 		if ok {
 			return fmt.Errorf("Error Message: %s", errorMessage)
-		}
-		if len(indexDefinitions) == 0 {
-			return fmt.Errorf("Table index not specified for table OID `" + rootOid + "`")
-		}
-		for _, indexDefinition := range indexDefinitions {
-			indexKeyPattern := indexDefinition.oid + "\\.(.*)"
-			re, err := regexp.Compile(indexKeyPattern)
-			if err != nil {
-				return err
-			}
-			matches := re.FindStringSubmatch(oid)
-			if len(matches) > 1 {
-				indexKey := matches[1]
-				indexValue, err := extractIndexValue(pdu)
-				if err != nil {
-					return err
-				}
-				indexMap, ok := indexAttributeMaps[indexKey]
-				if !ok {
-					indexMap = make(map[string]string)
-					indexAttributeMaps[indexKey] = indexMap
-				}
-				indexMap[indexDefinition.name] = indexValue
-				return nil
-			}
 		}
 		metrics[oid] = pdu
 		return nil
 	}
 
-	err = theSNMP.BulkWalk(rootOid, snmpWalkCallback)
+	err = theSNMP.BulkWalk(tableRootOid, snmpWalkCallback)
 	if err != nil {
 		return err
 	}
 
-	for indexKey, indexMap := range indexAttributeMaps {
-		ms := e.NewMetricSet(eventType)
-		err = ms.SetMetric("table_name", tableName, metric.ATTRIBUTE)
+	//an `index` uniquely identifies a row in an SNMP table.
+	//an `index key` is my term for the OID portion that is appended to the index OID and metric OID to produce SNMP table column data
+	//an `index key map` holds column data (as name-value pairs) for a certain row (aka index key)
+	//The `index key maps` map the row identifier (aka index key) to its column data (aka index key map)
+	indexKeyMaps := make(map[string]map[string]string)
+	for _, index := range metricSet.Index {
+		//Index OID + "." + Index Key = Index Value
+		indexKeyPattern := index.oid + "\\.(.*)"
+		re, err := regexp.Compile(indexKeyPattern)
+		if err != nil {
+			log.Error("unable to compile index key search pattern", err)
+			continue
+		}
+		for oid, pdu := range metrics {
+			matches := re.FindStringSubmatch(oid)
+			if len(matches) > 1 {
+				indexKey := matches[1]
+				indexValue, err := extractIndexValue(pdu)
+				if err != nil {
+					log.Error("unable to extract index value for ", indexKey, err)
+					continue
+				}
+				indexMap, ok := indexKeyMaps[indexKey]
+				if !ok {
+					indexMap = make(map[string]string)
+					indexKeyMaps[indexKey] = indexMap
+				}
+				indexMap[index.name] = indexValue
+			}
+		}
+	}
+
+	for indexKey, indexNVPairs := range indexKeyMaps {
+		ms := entity.NewMetricSet(metricSet.EventType)
+		err = ms.SetMetric("device", device, metric.ATTRIBUTE)
 		if err != nil {
 			log.Error(err.Error())
 		}
-		for indexName, indexValue := range indexMap {
-			err = ms.SetMetric(indexName, indexValue, metric.ATTRIBUTE)
+		err = ms.SetMetric("displayName", metricSet.Name, metric.ATTRIBUTE)
+		if err != nil {
+			log.Error(err.Error())
+		}
+		err = ms.SetMetric("index", indexKey, metric.ATTRIBUTE)
+		if err != nil {
+			log.Error(err.Error())
+		}
+		for n, v := range indexNVPairs {
+			err = ms.SetMetric(n, v, metric.ATTRIBUTE)
 			if err != nil {
 				log.Error(err.Error())
 			}
 		}
-		for _, metricDefinition := range metricDefinitions {
-			baseOid := strings.TrimSpace(metricDefinition.oid)
-			metricName := metricDefinition.metricName
+		for _, metric := range metricSet.Metrics {
+			baseOid := strings.TrimSpace(metric.oid)
+			metricName := metric.metricName
 			oid := baseOid + "." + indexKey
-			pdu := metrics[oid]
-			if metricName == "" {
-				metricName = oid
-			}
-			err = createMetric(metricName, metricDefinition.metricType, pdu, ms)
-			if err != nil {
-				log.Error(err.Error())
+			if pdu, ok := metrics[oid]; ok {
+				if metricName == "" {
+					metricName = oid
+				}
+				err = createMetric(metricName, metric.metricType, pdu, ms)
+				if err != nil {
+					log.Error(err.Error())
+				}
+			} else {
+				log.Warn("No data for " + oid)
 			}
 		}
 	}
