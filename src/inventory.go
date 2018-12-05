@@ -75,14 +75,8 @@ func populateInventory(inventoryItems []inventoryItem, entity *integration.Entit
 			if err != nil {
 				log.Error(err.Error())
 			}
-			if err != nil {
-				log.Error(err.Error())
-			}
 		} else {
 			log.Info("Null value for OID[" + oid + "]")
-		}
-		if err != nil {
-			log.Error("SNMP Error processing inventory variable "+variable.Name, err)
 		}
 	}
 	return nil
