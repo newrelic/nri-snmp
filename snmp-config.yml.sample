@@ -15,7 +15,7 @@ instances:
       hostname: localhost
       port: 161
       community: public
-      collection_files: "/etc/newrelic-infra/integrations.d/sample-metrics.yml"
+      collection_files: "/etc/newrelic-infra/integrations.d/snmp-metrics.yml"
     labels:
       key1: <LABEL_VALUE>
 
@@ -25,6 +25,6 @@ instances:
       hostname: localhost
       port: 161
       community: public
-      collection_files: "/etc/newrelic-infra/integrations.d/sample-metrics.yml"
+      collection_files: "/etc/newrelic-infra/integrations.d/snmp-metrics.yml"
     labels:
       key1: <LABEL_VALUE>
