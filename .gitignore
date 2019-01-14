@@ -20,3 +20,4 @@ Thumbs.db
 # Other #
 #########
 test-metrics.yml
+target/
