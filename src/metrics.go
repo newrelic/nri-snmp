@@ -4,43 +4,8 @@ import (
 	"fmt"
 
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
-	"github.com/newrelic/infra-integrations-sdk/integration"
-	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/soniah/gosnmp"
 )
-
-func runCollection(collection *collection, i *integration.Integration) error {
-	var err error
-	// Create an entity for the host
-	entity, err := i.Entity(targetHost, "host")
-	if err != nil {
-		return err
-	}
-
-	device := collection.Device
-	for _, metricSet := range collection.MetricSets {
-		metricSetType := metricSet.Type
-		switch metricSetType {
-		case "scalar":
-			err = populateScalarMetrics(device, metricSet, entity)
-			if err != nil {
-				log.Error("unable to populate metrics for scalar metric set [%s]. %v", metricSet.Name, err)
-			}
-		case "table":
-			err = populateTableMetrics(device, metricSet, entity)
-			if err != nil {
-				log.Error("unable to populate metrics for table [%v] %v", metricSet.RootOid, err)
-			}
-		default:
-			log.Error("invalid `metric_set` type: %s. check collection file", metricSetType)
-		}
-	}
-	err = populateInventory(collection.Inventory, entity)
-	if err != nil {
-		log.Error("unable to populate inventory. %s", err)
-	}
-	return nil
-}
 
 func createMetric(metricName string, metricType metricSourceType, pdu gosnmp.SnmpPDU, ms *metric.Set) error {
 	var sourceType metric.SourceType

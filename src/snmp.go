@@ -1,11 +1,13 @@
 package main
 
 import (
-	"os"
+	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	sdkArgs "github.com/newrelic/infra-integrations-sdk/args"
+	"github.com/newrelic/infra-integrations-sdk/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/soniah/gosnmp"
@@ -27,7 +29,7 @@ type argumentList struct {
 
 const (
 	integrationName    = "com.newrelic.snmp"
-	integrationVersion = "1.0.0"
+	integrationVersion = "1.0.3"
 )
 
 var (
@@ -43,7 +45,13 @@ func main() {
 	snmpIntegration, err := integration.New(integrationName, integrationVersion, integration.Args(&args))
 	if err != nil {
 		log.Error(err.Error())
-		os.Exit(1)
+		return
+	}
+
+	//log execution time
+	if args.Verbose {
+		startTime := time.Now()
+		defer logExecutionTime(startTime)
 	}
 
 	targetHost = strings.TrimSpace(args.SNMPHost)
@@ -51,14 +59,14 @@ func main() {
 	err = connect(targetHost, targetPort)
 	if err != nil {
 		log.Error("Error connecting to snmp server "+targetHost, err)
-		os.Exit(1)
+		return
 	}
 	defer disconnect()
 
 	// Ensure a collection file is specified
 	if args.CollectionFiles == "" {
 		log.Error("Must specify at least one collection file")
-		os.Exit(1)
+		return
 	}
 
 	// For each collection definition file, parse and collect it
@@ -68,19 +76,19 @@ func main() {
 		// Check that the filepath is an absolute path
 		if !filepath.IsAbs(collectionFile) {
 			log.Error("invalid metrics collection path %s. Metrics collection files must be specified as absolute paths.", collectionFile)
-			os.Exit(1)
+			return
 		}
 
 		// Parse the yaml file into a raw definition
 		collectionParser, err := parseYaml(collectionFile)
 		if err != nil {
 			log.Error("failed to parse collection definition file %s: %s", collectionFile, err)
-			os.Exit(1)
+			return
 		}
 		collections, err := parseCollection(collectionParser)
 		if err != nil {
 			log.Error("failed to parse collection definition %s: %s", collectionFile, err)
-			os.Exit(1)
+			return
 		}
 
 		for _, collection := range collections {
@@ -93,4 +101,64 @@ func main() {
 	if err := snmpIntegration.Publish(); err != nil {
 		log.Error(err.Error())
 	}
+}
+
+func runCollection(collection *collection, i *integration.Integration) error {
+	var err error
+	// Create an entity for the host
+	entity, err := i.Entity(fmt.Sprintf("%s:%d", targetHost, targetPort), "address")
+	if err != nil {
+		return err
+	}
+
+	device := collection.Device
+	for _, metricSet := range collection.MetricSets {
+		metricSetType := metricSet.Type
+		switch metricSetType {
+		case "scalar":
+			err = populateScalarMetrics(device, metricSet, entity)
+			if err != nil {
+				log.Error("unable to populate metrics for scalar metric set [%s]. %v", metricSet.Name, err)
+				reportError(device, metricSet, entity, err.Error())
+			}
+		case "table":
+			err = populateTableMetrics(device, metricSet, entity)
+			if err != nil {
+				log.Error("unable to populate metrics for table [%v] %v", metricSet.RootOid, err)
+				reportError(device, metricSet, entity, err.Error())
+			}
+		default:
+			log.Error("invalid `metric_set` type: %s. check collection file", metricSetType)
+		}
+	}
+	err = populateInventory(collection.Inventory, entity)
+	if err != nil {
+		log.Error("unable to populate inventory. %s", err)
+	}
+	return nil
+}
+
+func reportError(device string, metricSet metricSet, entity *integration.Entity, errorMessage string) {
+	ms := entity.NewMetricSet(metricSet.EventType)
+	err := ms.SetMetric("device", device, metric.ATTRIBUTE)
+	if err != nil {
+		log.Error(err.Error())
+	}
+	err = ms.SetMetric("name", metricSet.Name, metric.ATTRIBUTE)
+	if err != nil {
+		log.Error(err.Error())
+	}
+	err = ms.SetMetric("errorCode", "SNMPError", metric.ATTRIBUTE)
+	if err != nil {
+		log.Error(err.Error())
+	}
+	err = ms.SetMetric("errorMessage", errorMessage, metric.ATTRIBUTE)
+	if err != nil {
+		log.Error(err.Error())
+	}
+}
+
+func logExecutionTime(start time.Time) {
+	elapsed := time.Since(start)
+	log.Info("Execution took %s seconds", elapsed)
 }
