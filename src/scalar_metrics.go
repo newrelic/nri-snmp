@@ -51,7 +51,7 @@ func populateScalarMetrics(device string, metricSet metricSet, entity *integrati
 	if err != nil {
 		log.Error(err.Error())
 	}
-	err = ms.SetMetric("displayName", metricSet.Name, metric.ATTRIBUTE)
+	err = ms.SetMetric("name", metricSet.Name, metric.ATTRIBUTE)
 	if err != nil {
 		log.Error(err.Error())
 	}

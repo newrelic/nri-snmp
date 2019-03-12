@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,7 +28,7 @@ type argumentList struct {
 
 const (
 	integrationName    = "com.newrelic.snmp"
-	integrationVersion = "1.0.0"
+	integrationVersion = "1.0.3"
 )
 
 var (
@@ -93,4 +94,37 @@ func main() {
 	if err := snmpIntegration.Publish(); err != nil {
 		log.Error(err.Error())
 	}
+}
+
+func runCollection(collection *collection, i *integration.Integration) error {
+	var err error
+	// Create an entity for the host
+	entity, err := i.Entity(fmt.Sprintf("%s:%d", targetHost, targetPort), "address")
+	if err != nil {
+		return err
+	}
+
+	device := collection.Device
+	for _, metricSet := range collection.MetricSets {
+		metricSetType := metricSet.Type
+		switch metricSetType {
+		case "scalar":
+			err = populateScalarMetrics(device, metricSet, entity)
+			if err != nil {
+				log.Error("unable to populate metrics for scalar metric set [%s]. %v", metricSet.Name, err)
+			}
+		case "table":
+			err = populateTableMetrics(device, metricSet, entity)
+			if err != nil {
+				log.Error("unable to populate metrics for table [%v] %v", metricSet.RootOid, err)
+			}
+		default:
+			log.Error("invalid `metric_set` type: %s. check collection file", metricSetType)
+		}
+	}
+	err = populateInventory(collection.Inventory, entity)
+	if err != nil {
+		log.Error("unable to populate inventory. %s", err)
+	}
+	return nil
 }

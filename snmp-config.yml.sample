@@ -12,8 +12,8 @@ instances:
   - name: <INSTANCE IDENTIFIER>
     command: metrics
     arguments:
-      hostname: localhost
-      port: 161
+      snmp_host: localhost
+      snmp_port: 161
       community: public
       collection_files: "/etc/newrelic-infra/integrations.d/snmp-metrics.yml"
     labels:
@@ -22,8 +22,8 @@ instances:
   - name: <OTHER INSTANCE IDENTIFIER>
     command: inventory
     arguments:
-      hostname: localhost
-      port: 161
+      snmp_host: localhost
+      snmp_port: 161
       community: public
       collection_files: "/etc/newrelic-infra/integrations.d/snmp-metrics.yml"
     labels:
