@@ -19,7 +19,6 @@ func connect(targetHost string, targetPort int) error {
 		secLevel := strings.ToLower(strings.TrimSpace(args.SecurityLevel))
 		switch secLevel {
 		case "noauthnopriv":
-			log.Info("Setting security level: noAuthNoPriv")
 			msgFlags := gosnmp.NoAuthNoPriv
 			theSNMP = &gosnmp.GoSNMP{
 				Target:             targetHost,
@@ -31,7 +30,6 @@ func connect(targetHost string, targetPort int) error {
 				SecurityParameters: &gosnmp.UsmSecurityParameters{UserName: args.Username},
 			}
 		case "authnopriv":
-			log.Info("Setting security level: authNoPriv")
 			msgFlags := gosnmp.AuthNoPriv
 			authProtocolArg := strings.ToUpper(strings.TrimSpace(args.AuthProtocol))
 
@@ -58,7 +56,6 @@ func connect(targetHost string, targetPort int) error {
 				},
 			}
 		case "authpriv":
-			log.Info("Setting security level: authPriv")
 			msgFlags := gosnmp.AuthPriv
 
 			authProtocolArg := strings.ToUpper(strings.TrimSpace(args.AuthProtocol))

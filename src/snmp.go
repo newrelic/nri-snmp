@@ -54,9 +54,6 @@ func main() {
 		defer logExecutionTime(startTime)
 	}
 
-	log.Info("AuthPRotocol is ")
-	log.Info(args.AuthProtocol)
-	log.Info(args.SecurityLevel)
 	targetHost = strings.TrimSpace(args.SNMPHost)
 	targetPort = args.SNMPPort
 	err = connect(targetHost, targetPort)
