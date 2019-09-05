@@ -5,6 +5,8 @@ metrics and inventory reported by an SNMP server.
 
 Metrics data is obtained by making SNMP GET requests for configured list of OIDs and SNMP walk requests for the configured list of SNMP tables.
 
+See our [documentation web site](https://docs.newrelic.com/docs/integrations/host-integrations/host-integrations-list/snmp-monitoring-integration) for more details.
+
 ## Usage
 
 This is the description about how to run the SNMP Integration with New Relic
