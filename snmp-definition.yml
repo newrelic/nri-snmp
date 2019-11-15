@@ -14,21 +14,21 @@ os: linux
 commands:
   all_data:
     command:
-      - ./bin/nr-snmp
+      - ./bin/nri-snmp
     interval: 30
   metrics:
     command:
-      - ./bin/nr-snmp
+      - ./bin/nri-snmp
       - --metrics
     interval: 30
   inventory:
     command:
-      - ./bin/nr-snmp
+      - ./bin/nri-snmp
       - --inventory
     prefix: config/snmp
     interval: 30
   events:
     command:
-    - ./bin/nr-snmp
+    - ./bin/nri-snmp
     - --events
     interval: 30
