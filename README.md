@@ -28,16 +28,16 @@ Assuming that you have the source code and Go tool installed you can build and r
 $ make
 ```
 
-* The command above will execute the tests for the SNMP Integration and build an executable file called `nr-snmp` under `bin` directory. Run `nr-snmp`:
+* The command above will execute the tests for the SNMP Integration and build an executable file called `nri-snmp` under `bin` directory. Run `nri-snmp`:
 
 ```bash
-$ ./bin/nr-snmp
+$ ./bin/nri-snmp
 ```
 
-* If you want to know more about usage of `./bin/nr-snmp` check
+* If you want to know more about usage of `./bin/nri-snmp` check
 
 ```bash
-$ ./bin/nr-snmp -help
+$ ./bin/nri-snmp -help
 ```
 
 For managing external dependencies [govendor tool](https://github.com/kardianos/govendor) is used. It is required to lock all external dependencies to specific version (if possible) into vendor directory.
