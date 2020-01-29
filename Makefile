@@ -1,16 +1,17 @@
-export PATH := $(PATH):$(GOPATH)/bin
-
-INTEGRATION     := snmp
-BINARY_NAME      = nr-$(INTEGRATION)
-SRC_DIR          = ./src/
-VALIDATE_DEPS    = golang.org/x/lint/golint
-TEST_DEPS        = github.com/axw/gocov/gocov github.com/AlekSi/gocov-xml
-INTEGRATIONS_DIR = /var/db/newrelic-infra/newrelic-integrations/
-CONFIG_DIR       = /etc/newrelic-infra/integrations.d
-GO_FILES        := ./src/
-WORKDIR         := $(shell pwd)
-TARGET          := target
-TARGET_DIR       = $(WORKDIR)/$(TARGET)
+WORKDIR     := $(shell pwd)
+TARGET      := target
+TARGET_DIR   = $(WORKDIR)/$(TARGET)
+NATIVEOS    := $(shell go version | awk -F '[ /]' '{print $$4}')
+NATIVEARCH  := $(shell go version | awk -F '[ /]' '{print $$5}')
+INTEGRATION := snmp
+BINARY_NAME  = nri-$(INTEGRATION)
+GO_PKGS     := $(shell go list ./... | grep -v "/vendor/")
+GO_FILES    := ./src/
+GOTOOLS      =  github.com/kardianos/govendor \
+								gopkg.in/alecthomas/gometalinter.v2 \
+								github.com/axw/gocov/gocov \
+								github.com/stretchr/testify/assert \
+								github.com/AlekSi/gocov-xml \
 
 all: build
 
@@ -94,4 +95,16 @@ install: bin/$(BINARY_NAME)
 # Include thematic Makefiles
 include Makefile-*.mk
 
-.PHONY: all build clean validate-deps validate-only validate compile-deps compile test-deps test-only test integration-test install
+check-version:
+ifdef GOOS
+ifneq "$(GOOS)" "$(NATIVEOS)"
+	$(error GOOS is not $(NATIVEOS). Cross-compiling is only allowed for 'clean', 'deps-only' and 'compile-only' targets)
+endif
+endif
+ifdef GOARCH
+ifneq "$(GOARCH)" "$(NATIVEARCH)"
+	$(error GOARCH variable is not $(NATIVEARCH). Cross-compiling is only allowed for 'clean', 'deps-only' and 'compile-only' targets)
+endif
+endif
+
+.PHONY: all build clean tools tools-update deps validate compile test check-version

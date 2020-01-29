@@ -30,7 +30,7 @@ type argumentList struct {
 
 const (
 	integrationName    = "com.newrelic.snmp"
-	integrationVersion = "1.0.4"
+	integrationVersion = "1.1.0"
 )
 
 var (

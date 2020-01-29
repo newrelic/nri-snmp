@@ -5,6 +5,8 @@ metrics and inventory reported by an SNMP server.
 
 Metrics data is obtained by making SNMP GET requests for configured list of OIDs and SNMP walk requests for the configured list of SNMP tables.
 
+See our [documentation web site](https://docs.newrelic.com/docs/integrations/host-integrations/host-integrations-list/snmp-monitoring-integration) for more details.
+
 ## Usage
 
 This is the description about how to run the SNMP Integration with New Relic
@@ -26,16 +28,16 @@ Assuming that you have the source code and Go tool installed you can build and r
 $ make
 ```
 
-* The command above will execute the tests for the SNMP Integration and build an executable file called `nr-snmp` under `bin` directory. Run `nr-snmp`:
+* The command above will execute the tests for the SNMP Integration and build an executable file called `nri-snmp` under `bin` directory. Run `nri-snmp`:
 
 ```bash
-$ ./bin/nr-snmp
+$ ./bin/nri-snmp
 ```
 
-* If you want to know more about usage of `./bin/nr-snmp` check
+* If you want to know more about usage of `./bin/nri-snmp` check
 
 ```bash
-$ ./bin/nr-snmp -help
+$ ./bin/nri-snmp -help
 ```
 
 For managing external dependencies [govendor tool](https://github.com/kardianos/govendor) is used. It is required to lock all external dependencies to specific version (if possible) into vendor directory.
