@@ -15,12 +15,13 @@ import (
 
 type argumentList struct {
 	sdkArgs.DefaultArgumentList
-	SNMPHost        string `default:"localhost" help:"Hostname or IP where the SNMP server is running."`
+	SNMPHost        string `default:"127.0.0.1" help:"Hostname or IP where the SNMP server is running."`
 	SNMPPort        int    `default:"161" help:"Port on which SNMP server is listening."`
 	Community       string `default:"public" help:"SNMP Version 2 Community string "`
 	V3              bool   `default:"false" help:"Use SNMP Version 3."`
+	SecurityLevel   string `default:"" help:"Valid values are noAuthnoPriv, authNoPriv or authPriv"`
 	Username        string `default:"" help:"The security name that identifies the SNMPv3 user."`
-	AuthProtocol    string `default:"MD5" help:"The algorithm used for SNMPv3 authentication."`
+	AuthProtocol    string `default:"SHA" help:"The algorithm used for SNMPv3 authentication (SHA or MD5)."`
 	AuthPassphrase  string `default:"" help:"The password used to generate the key used for SNMPv3 authentication."`
 	PrivProtocol    string `default:"AES" help:"The algorithm used for SNMPv3 message integrity."`
 	PrivPassphrase  string `default:"" help:"The password used to generate the key used to verify SNMPv3 message integrity."`
@@ -47,7 +48,6 @@ func main() {
 		log.Error(err.Error())
 		return
 	}
-
 	//log execution time
 	if args.Verbose {
 		startTime := time.Now()
@@ -58,7 +58,8 @@ func main() {
 	targetPort = args.SNMPPort
 	err = connect(targetHost, targetPort)
 	if err != nil {
-		log.Error("Error connecting to snmp server "+targetHost, err)
+		log.Error("Error connecting to snmp server " + targetHost)
+		log.Error(err.Error())
 		return
 	}
 	defer disconnect()
@@ -82,18 +83,21 @@ func main() {
 		// Parse the yaml file into a raw definition
 		collectionParser, err := parseYaml(collectionFile)
 		if err != nil {
-			log.Error("failed to parse collection definition file %s: %s", collectionFile, err)
+			log.Error("failed to parse collection definition file: " + collectionFile)
+			log.Error(err.Error())
 			return
 		}
 		collections, err := parseCollection(collectionParser)
 		if err != nil {
-			log.Error("failed to parse collection definition %s: %s", collectionFile, err)
+			log.Error("failed to parse collection definition: " + collectionFile)
+			log.Error(err.Error())
 			return
 		}
 
 		for _, collection := range collections {
 			if err := runCollection(collection, snmpIntegration); err != nil {
-				log.Error("failed to complete collection execution: %s", err)
+				log.Error("failed to complete collection execution")
+				log.Error(err.Error())
 			}
 		}
 	}
