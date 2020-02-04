@@ -68,7 +68,7 @@ func populateTableMetrics(device string, metricSet metricSet, entity *integratio
 	}
 
 	for indexKey, indexNVPairs := range indexKeyMaps {
-		ms := entity.NewMetricSet(metricSet.EventType)
+		ms := entity.NewMetricSet(metricSet.EventType, metric.Attr("IntegrationVersion", integrationVersion))
 		err = ms.SetMetric("device", device, metric.ATTRIBUTE)
 		if err != nil {
 			log.Error(err.Error())
