@@ -31,15 +31,9 @@ func populateScalarMetrics(device string, metricSet metricSet, entity *integrati
 		return fmt.Errorf("Metric Set %s has %d metrics, the current limit is 200. This metric set will not be reported", metricSet.Name, len(oids))
 	}
 
-	ms := entity.NewMetricSet(metricSet.EventType)
-	err := ms.SetMetric("device", device, metric.ATTRIBUTE)
-	if err != nil {
-		log.Error(err.Error())
-	}
-	err = ms.SetMetric("name", metricSet.Name, metric.ATTRIBUTE)
-	if err != nil {
-		log.Error(err.Error())
-	}
+	ms := entity.NewMetricSet(metricSet.EventType,
+		metric.Attr("device", device),
+		metric.Attr("name", metricSet.Name))
 
 	snmpGetResult, err := theSNMP.Get(oids)
 	if err != nil {
