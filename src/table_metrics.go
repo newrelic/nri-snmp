@@ -68,19 +68,11 @@ func populateTableMetrics(device string, metricSet metricSet, entity *integratio
 	}
 
 	for indexKey, indexNVPairs := range indexKeyMaps {
-		ms := entity.NewMetricSet(metricSet.EventType)
-		err = ms.SetMetric("device", device, metric.ATTRIBUTE)
-		if err != nil {
-			log.Error(err.Error())
-		}
-		err = ms.SetMetric("name", metricSet.Name, metric.ATTRIBUTE)
-		if err != nil {
-			log.Error(err.Error())
-		}
-		err = ms.SetMetric("index", indexKey, metric.ATTRIBUTE)
-		if err != nil {
-			log.Error(err.Error())
-		}
+		ms := entity.NewMetricSet(metricSet.EventType,
+			metric.Attr("device", device),
+			metric.Attr("name", metricSet.Name),
+			metric.Attr("index", indexKey))
+
 		for n, v := range indexNVPairs {
 			err = ms.SetMetric(n, v, metric.ATTRIBUTE)
 			if err != nil {

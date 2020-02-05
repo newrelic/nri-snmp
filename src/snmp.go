@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	sdkArgs "github.com/newrelic/infra-integrations-sdk/args"
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
@@ -47,11 +46,6 @@ func main() {
 	if err != nil {
 		log.Error(err.Error())
 		return
-	}
-	//log execution time
-	if args.Verbose {
-		startTime := time.Now()
-		defer logExecutionTime(startTime)
 	}
 
 	targetHost = strings.TrimSpace(args.SNMPHost)
@@ -160,9 +154,4 @@ func reportError(device string, metricSet metricSet, entity *integration.Entity,
 	if err != nil {
 		log.Error(err.Error())
 	}
-}
-
-func logExecutionTime(start time.Time) {
-	elapsed := time.Since(start)
-	log.Info("Execution took %s seconds", elapsed)
 }
