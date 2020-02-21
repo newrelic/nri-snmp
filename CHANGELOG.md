@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## 1.1.0 (2019-11-18)
 ### Changed
+- Better support for SNMP v3
+- Added id attributes to metric sets to work with delta, rate source type metrics
+
+## 1.1.0 (2019-11-18)
+### Changed
 - Renamed the integration executable from nr-snmp to nri-snmp in order to be consistent with the package naming. **Important Note:** if you have any security module rules (eg. SELinux), alerts or automation that depends on the name of this binary, these will have to be updated.
 ## [1.0.4] - 2019-07-23
 - Removed unneeded nrjmx dependency
