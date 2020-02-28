@@ -14,8 +14,8 @@ param (
 )
 
 $integration = $(Split-Path -Leaf $PSScriptRoot)
-$integrationName = $integration.Replace("nri-", "")
-$executable = "nri-$integrationName.exe"
+$integrationName = "snmp"
+$executable = "nri-snmp.exe"
 $version = "1.1.2"
 
 # verifying version number format
