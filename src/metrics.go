@@ -7,7 +7,7 @@ import (
 	"github.com/soniah/gosnmp"
 )
 
-func createMetric(metricName string, metricType metricSourceType, pdu gosnmp.SnmpPDU, ms *metric.Set) error {
+func createMetric(metricName string, metricType metric.SourceType, pdu gosnmp.SnmpPDU, ms *metric.Set) error {
 	var sourceType metric.SourceType
 	var value interface{}
 	switch pdu.Type {
@@ -18,18 +18,15 @@ func createMetric(metricName string, metricType metricSourceType, pdu gosnmp.Snm
 		}
 	case gosnmp.Gauge32, gosnmp.Counter32, gosnmp.Counter64, gosnmp.Integer, gosnmp.Uinteger32:
 		switch metricType {
-		case auto, gauge:
+		case -1:
 			value = gosnmp.ToBigInt(pdu.Value)
 			sourceType = metric.GAUGE
-		case delta:
+		case metric.ATTRIBUTE:
 			value = gosnmp.ToBigInt(pdu.Value)
-			sourceType = metric.DELTA
-		case rate:
-			value = gosnmp.ToBigInt(pdu.Value)
-			sourceType = metric.RATE
-		case attribute:
-			value = gosnmp.ToBigInt(pdu.Value).String()
 			sourceType = metric.ATTRIBUTE
+		default:
+			value = gosnmp.ToBigInt(pdu.Value)
+			sourceType = metricType
 		}
 		return ms.SetMetric(metricName, value, sourceType)
 	case gosnmp.ObjectIdentifier, gosnmp.IPAddress:
@@ -41,38 +38,37 @@ func createMetric(metricName string, metricType metricSourceType, pdu gosnmp.Snm
 		return fmt.Errorf("unable to assert ObjectIdentifier or IPAddress as string")
 	case gosnmp.OpaqueFloat:
 		switch metricType {
-		case auto, gauge:
+		case -1:
 			value = float64(pdu.Value.(float32))
 			sourceType = metric.GAUGE
-		case delta:
-			value = float64(pdu.Value.(float32))
-			sourceType = metric.DELTA
-		case rate:
-			value = float64(pdu.Value.(float32))
-			sourceType = metric.RATE
-		case attribute:
+		case metric.ATTRIBUTE:
 			value = fmt.Sprintf("%f", float64(pdu.Value.(float32)))
 			sourceType = metric.ATTRIBUTE
+		default:
+			value = float64(pdu.Value.(float32))
+			sourceType = metricType
 		}
 		return ms.SetMetric(metricName, value, sourceType)
 	case gosnmp.OpaqueDouble:
 		switch metricType {
-		case auto, gauge:
+		case -1:
 			value = pdu.Value.(float64)
 			sourceType = metric.GAUGE
-		case delta:
-			value = pdu.Value.(float64)
-			sourceType = metric.DELTA
-		case rate:
-			value = pdu.Value.(float64)
-			sourceType = metric.RATE
-		case attribute:
+		case metric.ATTRIBUTE:
 			value = fmt.Sprintf("%f", pdu.Value.(float64))
 			sourceType = metric.ATTRIBUTE
+		default:
+			value = pdu.Value.(float64)
+			sourceType = metricType
 		}
 		return ms.SetMetric(metricName, value, sourceType)
 	case gosnmp.Boolean:
-		return fmt.Errorf("unsupported PDU type[Boolean] for %v", metricName)
+		boolValue := pdu.Value.(bool)
+		if boolValue {
+			return ms.SetMetric(metricName, 1, sourceType)
+		} else {
+			return ms.SetMetric(metricName, 0, sourceType)
+		}
 	case gosnmp.BitString:
 		return fmt.Errorf("unsupported PDU type[BitString] for %v", metricName)
 	case gosnmp.TimeTicks:

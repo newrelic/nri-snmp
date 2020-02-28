@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/newrelic/infra-integrations-sdk/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -79,7 +80,7 @@ type metricSet struct {
 type metricDef struct {
 	oid        string
 	metricName string
-	metricType metricSourceType
+	metricType metric.SourceType
 }
 
 // index is a storage struct containing
@@ -98,24 +99,16 @@ type inventoryItem struct {
 }
 
 var (
-	// metricTypes maps the string used in yaml to a metric type
-	metricTypes = map[string]metricSourceType{
-		"auto":      auto,
-		"gauge":     gauge,
-		"delta":     delta,
-		"attribute": attribute,
-		"rate":      rate,
+	// SourcesNameToType maps the string used in yaml to a metric type
+	SourcesNameToType = map[string]metric.SourceType{
+		"auto":      -1,
+		"gauge":     metric.GAUGE,
+		"delta":     metric.DELTA,
+		"pdelta":    metric.PDELTA,
+		"rate":      metric.RATE,
+		"prate":     metric.PRATE,
+		"attribute": metric.ATTRIBUTE,
 	}
-)
-
-type metricSourceType int
-
-const (
-	auto      metricSourceType = 1
-	gauge     metricSourceType = 2
-	delta     metricSourceType = 3
-	rate      metricSourceType = 4
-	attribute metricSourceType = 5
 )
 
 // parseYaml reads a yaml file and parses it into a collectionParser.
@@ -162,11 +155,11 @@ func parseCollection(c *collectionParser) ([]*collection, error) {
 				}
 				metricTypeString := metricParser.MetricType
 				if metricTypeString == "" {
-					newMetric.metricType = auto
+					newMetric.metricType = -1
 				} else {
-					mt, ok := metricTypes[metricTypeString]
+					mt, ok := SourcesNameToType[metricTypeString]
 					if !ok {
-						return nil, fmt.Errorf("Invalid metric type %s", metricTypeString)
+						return nil, fmt.Errorf("invalid metric type %s", metricTypeString)
 					}
 					newMetric.metricType = mt
 				}

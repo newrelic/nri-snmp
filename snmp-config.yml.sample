@@ -1,5 +1,5 @@
 # Configuration file template, provided in case you want to provide extra
-# configuration over the nr-nri-snmp-config.yml
+# configuration over the snmp-config.yml
 # file.
 #
 # For a complete description of the Configuration File Specification, please
