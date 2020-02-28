@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/newrelic/infra-integrations-sdk/data/attribute"
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
@@ -69,9 +70,9 @@ func populateTableMetrics(device string, metricSet metricSet, entity *integratio
 
 	for indexKey, indexNVPairs := range indexKeyMaps {
 		ms := entity.NewMetricSet(metricSet.EventType,
-			metric.Attr("device", device),
-			metric.Attr("name", metricSet.Name),
-			metric.Attr("index", indexKey))
+			attribute.Attr("device", device),
+			attribute.Attr("name", metricSet.Name),
+			attribute.Attr("index", indexKey))
 
 		for n, v := range indexNVPairs {
 			err = ms.SetMetric(n, v, metric.ATTRIBUTE)

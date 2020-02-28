@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/newrelic/infra-integrations-sdk/data/attribute"
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
@@ -32,8 +33,8 @@ func populateScalarMetrics(device string, metricSet metricSet, entity *integrati
 	}
 
 	ms := entity.NewMetricSet(metricSet.EventType,
-		metric.Attr("device", device),
-		metric.Attr("name", metricSet.Name))
+		attribute.Attr("device", device),
+		attribute.Attr("name", metricSet.Name))
 
 	snmpGetResult, err := theSNMP.Get(oids)
 	if err != nil {
