@@ -1,13 +1,17 @@
-NATIVEOS	 := $(shell go version | awk -F '[ /]' '{print $$4}')
-NATIVEARCH	 := $(shell go version | awk -F '[ /]' '{print $$5}')
+NATIVEOS     := $(shell go version | awk -F '[ /]' '{print $$4}')
+NATIVEARCH   := $(shell go version | awk -F '[ /]' '{print $$5}')
 INTEGRATION  := snmp
 BINARY_NAME   = nri-$(INTEGRATION)
+WORKDIR      := $(shell pwd)
+GO_FILES     := ./src/
+TARGET       := target
+TARGET_DIR    = $(WORKDIR)/$(TARGET)
 GO_PKGS      := $(shell go list ./... | grep -v "/vendor/")
 GOTOOLS       = github.com/kardianos/govendor \
-		gopkg.in/alecthomas/gometalinter.v2 \
-		github.com/axw/gocov/gocov \
-		github.com/stretchr/testify/assert \
-		github.com/AlekSi/gocov-xml \
+                gopkg.in/alecthomas/gometalinter.v2 \
+                github.com/axw/gocov/gocov \
+                github.com/stretchr/testify/assert \
+                github.com/AlekSi/gocov-xml
 
 all: build
 
