@@ -1,4 +1,4 @@
-// Copyright 2012-2018 The GoSNMP Authors. All rights reserved.  Use of this
+// Copyright 2012-2020 The GoSNMP Authors. All rights reserved.  Use of this
 // source code is governed by a BSD-style license that can be found in the
 // LICENSE file.
 
@@ -6,12 +6,16 @@ package gosnmp
 
 import (
 	"bytes"
+	"context"
 	"encoding/asn1"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"net"
+	"reflect"
+	"runtime"
+	"strings"
 	"sync/atomic"
-	"time"
 )
 
 //
@@ -36,7 +40,7 @@ type SnmpPacket struct {
 	Version            SnmpVersion
 	MsgFlags           SnmpV3MsgFlags
 	SecurityModel      SnmpV3SecurityModel
-	SecurityParameters SnmpV3SecurityParameters
+	SecurityParameters SnmpV3SecurityParameters // interface
 	ContextEngineID    string
 	ContextName        string
 	Community          string
@@ -49,7 +53,7 @@ type SnmpPacket struct {
 	NonRepeaters       uint8
 	MaxRepetitions     uint8
 	Variables          []SnmpPDU
-	Logger             Logger
+	Logger             Logger // interface
 
 	// v1 traps have a very different format from v2c and v3 traps.
 	//
@@ -122,26 +126,37 @@ func (x *GoSNMP) logPrintf(format string, v ...interface{}) {
 // send/receive one snmp request
 func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 	wait bool) (result *SnmpPacket, err error) {
-	finalDeadline := time.Now().Add(x.Timeout)
-
 	allReqIDs := make([]uint32, 0, x.Retries+1)
-	allMsgIDs := make([]uint32, 0, x.Retries+1)
+	// allMsgIDs := make([]uint32, 0, x.Retries+1) // unused
+
+	timeout := x.Timeout
 	for retries := 0; ; retries++ {
 		if retries > 0 {
 			x.logPrintf("Retry number %d. Last error was: %v", retries, err)
-			if time.Now().After(finalDeadline) {
-				err = fmt.Errorf("Request timeout (after %d retries)", retries-1)
-				break
+			if x.ExponentialTimeout {
+				// https://www.webnms.com/snmp/help/snmpapi/snmpv3/v1/timeout.html
+				timeout *= 2
 			}
 			if retries > x.Retries {
-				// Report last error
+				if strings.Contains(err.Error(), "timeout") {
+					err = fmt.Errorf("Request timeout (after %d retries)", retries-1)
+				}
 				break
 			}
 		}
 		err = nil
 
-		reqDeadline := time.Now().Add(x.Timeout / time.Duration(x.Retries+1))
-		x.Conn.SetDeadline(reqDeadline)
+		if x.Context.Err() != nil {
+			return nil, x.Context.Err()
+		}
+
+		ctx, cancel := context.WithTimeout(x.Context, timeout)
+		defer cancel()
+		deadline, _ := ctx.Deadline()
+		err = x.Conn.SetDeadline(deadline)
+		if err != nil {
+			return nil, err
+		}
 
 		// Request ID is an atomic counter (started at a random value)
 		reqID := atomic.AddUint32(&(x.requestID), 1) // TODO: fix overflows
@@ -151,7 +166,7 @@ func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 
 		if x.Version == Version3 {
 			msgID := atomic.AddUint32(&(x.msgID), 1) // TODO: fix overflows
-			allMsgIDs = append(allMsgIDs, msgID)
+			// allMsgIDs = append(allMsgIDs, msgID) // unused
 
 			packetOut.MsgID = msgID
 
@@ -180,7 +195,7 @@ func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 		}
 
 		// all sends wait for the return packet, except for SNMPv2Trap
-		if wait == false {
+		if !wait {
 			return &SnmpPacket{}, nil
 		}
 
@@ -192,11 +207,21 @@ func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 
 			var resp []byte
 			resp, err = x.receive()
-			if err != nil {
+			if err == io.EOF && strings.HasPrefix(x.Transport, "tcp") {
+				// EOF on TCP: reconnect and retry. Do not count
+				// as retry as socket was broken
+				x.logPrintf("ERROR: EOF. Performing reconnect")
+				err = x.netConnect()
+				if err != nil {
+					return nil, err
+				}
+				retries--
+				break
+			} else if err != nil {
 				// receive error. retrying won't help. abort
 				break
 			}
-			x.logPrint("GET RESPONSE OK : %+v", resp)
+			x.logPrintf("GET RESPONSE OK: %+v", resp)
 			result = new(SnmpPacket)
 			result.Logger = x.Logger
 
@@ -209,7 +234,6 @@ func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 			cursor, err = x.unmarshalHeader(resp, result)
 			if err != nil {
 				x.logPrintf("ERROR on unmarshall header: %s", err)
-				err = fmt.Errorf("Unable to decode packet: %s", err.Error())
 				continue
 			}
 
@@ -219,18 +243,16 @@ func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 					x.logPrintf("ERROR on Test Authentication on v3: %s", err)
 					break
 				}
-				resp, cursor, err = x.decryptPacket(resp, cursor, result)
+				resp, cursor, _ = x.decryptPacket(resp, cursor, result)
 			}
 
 			err = x.unmarshalPayload(resp, cursor, result)
 			if err != nil {
 				x.logPrintf("ERROR on UnmarshalPayload on v3: %s", err)
-				err = fmt.Errorf("Unable to decode packet: %s", err.Error())
 				continue
 			}
-			if result == nil || len(result.Variables) < 1 {
+			if len(result.Variables) < 1 {
 				x.logPrintf("ERROR on UnmarshalPayload on v3: %s", err)
-				err = fmt.Errorf("Unable to decode packet: nil")
 				continue
 			}
 
@@ -256,8 +278,7 @@ func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 				validID = true
 			}
 			if !validID {
-				x.logPrint("ERROR  out of order ")
-				err = fmt.Errorf("Out of order response")
+				x.logPrint("ERROR  out of order")
 				continue
 			}
 
@@ -281,7 +302,10 @@ func (x *GoSNMP) sendOneRequest(packetOut *SnmpPacket,
 func (x *GoSNMP) send(packetOut *SnmpPacket, wait bool) (result *SnmpPacket, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("recover: %v", e)
+			var buf = make([]byte, 8192)
+			runtime.Stack(buf, true)
+
+			err = fmt.Errorf("recover: %v\nStack:%v\n", e, string(buf))
 		}
 	}()
 
@@ -314,7 +338,7 @@ func (x *GoSNMP) send(packetOut *SnmpPacket, wait bool) (result *SnmpPacket, err
 
 		// detect out-of-time-window error and retransmit with updated auth engine parameters
 		if len(result.Variables) == 1 && result.Variables[0].Name == ".1.3.6.1.6.3.15.1.1.2.0" {
-			x.logPrintf("WARNING detected out-of-time-window ERROR")
+			x.logPrint("WARNING detected out-of-time-window ERROR")
 			err = x.updatePktSecurityParameters(packetOut)
 			if err != nil {
 				x.logPrintf("ERROR  updatePktSecurityParameters error: %s", err)
@@ -326,7 +350,7 @@ func (x *GoSNMP) send(packetOut *SnmpPacket, wait bool) (result *SnmpPacket, err
 
 	// detect unknown engine id error and retransmit with updated engine id
 	if len(result.Variables) == 1 && result.Variables[0].Name == ".1.3.6.1.6.3.15.1.1.4.0" {
-		x.logPrintf("WARNING detected unknown enginer id ERROR")
+		x.logPrint("WARNING detected unknown enginer id ERROR")
 		err = x.updatePktSecurityParameters(packetOut)
 		if err != nil {
 			x.logPrintf("ERROR  updatePktSecurityParameters error: %s", err)
@@ -336,8 +360,15 @@ func (x *GoSNMP) send(packetOut *SnmpPacket, wait bool) (result *SnmpPacket, err
 	}
 	return result, err
 }
+func (packet *SnmpPacket) logPrintf(format string, v ...interface{}) {
+	if packet.Logger != nil {
+		packet.Logger.Printf(format, v...)
+	}
+}
 
 // -- Marshalling Logic --------------------------------------------------------
+
+// MarshalMsg marshalls a snmp packet, ready for sending across the wire
 func (packet *SnmpPacket) MarshalMsg() ([]byte, error) {
 	return packet.marshalMsg()
 }
@@ -376,7 +407,10 @@ func (packet *SnmpPacket) marshalMsg() ([]byte, error) {
 		return nil, err2
 	}
 	msg.Write(bufLengthBytes)
-	buf.WriteTo(msg) // reverse logic - want to do msg.Write(buf)
+	_, err = buf.WriteTo(msg)
+	if err != nil {
+		return nil, err
+	}
 
 	authenticatedMessage, err := packet.authenticate(msg.Bytes())
 	if err != nil {
@@ -389,33 +423,46 @@ func (packet *SnmpPacket) marshalMsg() ([]byte, error) {
 func (packet *SnmpPacket) marshalSNMPV1TrapHeader() ([]byte, error) {
 	buf := new(bytes.Buffer)
 
-	mOid, err := marshalOID(packet.Enterprise)
+	// marshal OID
+	oidBytes, err := marshalOID(packet.Enterprise)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to marshal OID: %s\n", err.Error())
+		return nil, fmt.Errorf("unable to marshal OID: %s", err.Error())
 	}
+	buf.Write([]byte{byte(ObjectIdentifier), byte(len(oidBytes))})
+	buf.Write(oidBytes)
 
-	buf.Write([]byte{ObjectIdentifier, byte(len(mOid))})
-	buf.Write(mOid)
-
-	// write IPAddress type, length and ipAddress value
+	// marshal AgentAddress (ip address)
 	ip := net.ParseIP(packet.AgentAddress)
 	ipAddressBytes := ipv4toBytes(ip)
-	buf.Write([]byte{IPAddress, byte(len(ipAddressBytes))})
+	buf.Write([]byte{byte(IPAddress), byte(len(ipAddressBytes))})
 	buf.Write(ipAddressBytes)
 
-	buf.Write([]byte{Integer, 1})
-	buf.WriteByte(byte(packet.GenericTrap))
-
-	buf.Write([]byte{Integer, 1})
-	buf.WriteByte(byte(packet.SpecificTrap))
-
-	timeTicks, e := marshalUint32(uint32(packet.Timestamp))
-	if e != nil {
-		return nil, fmt.Errorf("Unable to Timestamp: %s\n", e.Error())
+	// marshal GenericTrap. Could just cast GenericTrap to a single byte as IDs greater than 6 are unknown,
+	// but do it properly. See issue 182.
+	var genericTrapBytes []byte
+	genericTrapBytes, err = marshalInt32(packet.GenericTrap)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to marshal SNMPv1 GenericTrap: %s", err.Error())
 	}
+	buf.Write([]byte{byte(Integer), byte(len(genericTrapBytes))})
+	buf.Write(genericTrapBytes)
 
-	buf.Write([]byte{TimeTicks, byte(len(timeTicks))})
-	buf.Write(timeTicks)
+	// marshal SpecificTrap
+	var specificTrapBytes []byte
+	specificTrapBytes, err = marshalInt32(packet.SpecificTrap)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to marshal SNMPv1 SpecificTrap: %s", err.Error())
+	}
+	buf.Write([]byte{byte(Integer), byte(len(specificTrapBytes))})
+	buf.Write(specificTrapBytes)
+
+	// marshal timeTicks
+	timeTickBytes, e := marshalUint32(uint32(packet.Timestamp))
+	if e != nil {
+		return nil, fmt.Errorf("unable to Timestamp: %s", e.Error())
+	}
+	buf.Write([]byte{byte(TimeTicks), byte(len(timeTickBytes))})
+	buf.Write(timeTickBytes)
 
 	return buf.Bytes(), nil
 }
@@ -448,20 +495,21 @@ func (packet *SnmpPacket) marshalPDU() ([]byte, error) {
 		}
 
 		buf.Write(snmpV1TrapHeader)
+
 	default:
 		// requestid
 		buf.Write([]byte{2, 4})
 		err := binary.Write(buf, binary.BigEndian, packet.RequestID)
 
 		if err != nil {
-			return nil, fmt.Errorf("Unable to marshal OID: %s\n", err.Error())
+			return nil, fmt.Errorf("unable to marshal OID: %s", err.Error())
 		}
 
 		// error
-		buf.Write([]byte{2, 1, 0})
+		buf.Write([]byte{2, 1, byte(packet.Error)})
 
 		// error index
-		buf.Write([]byte{2, 1, 0})
+		buf.Write([]byte{2, 1, byte(packet.ErrorIndex)})
 
 	}
 
@@ -482,7 +530,10 @@ func (packet *SnmpPacket) marshalPDU() ([]byte, error) {
 	}
 	pdu.Write(bufLengthBytes)
 
-	buf.WriteTo(pdu) // reverse logic - want to do pdu.Write(buf)
+	_, err = buf.WriteTo(pdu)
+	if err != nil {
+		return nil, err
+	}
 	return pdu.Bytes(), nil
 }
 
@@ -531,7 +582,7 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		tmpBuf.Write([]byte{byte(ObjectIdentifier)})
 		tmpBuf.Write(ltmp)
 		tmpBuf.Write(oid)
-		tmpBuf.Write([]byte{Null, 0x00})
+		tmpBuf.Write([]byte{byte(Null), byte(EndOfContents)})
 
 		ltmp, err = marshalLength(tmpBuf.Len())
 		if err != nil {
@@ -539,20 +590,12 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		}
 		pduBuf.Write([]byte{byte(Sequence)})
 		pduBuf.Write(ltmp)
-		tmpBuf.WriteTo(pduBuf)
-
-	/*
-		snmp Integer32 and INTEGER:
-		-2^31 and 2^31-1 inclusive (-2147483648 to 2147483647 decimal)
-		(FYI https://groups.google.com/forum/#!topic/comp.protocols.snmp/1xaAMzCe_hE)
-
-		snmp Counter32, Gauge32, TimeTicks, Unsigned32:
-		non-negative integer, maximum value of 2^32-1 (4294967295 decimal)
-	*/
+		_, err = tmpBuf.WriteTo(pduBuf)
+		if err != nil {
+			return nil, err
+		}
 
 	case Integer:
-		// TODO tests currently only cover positive integers
-
 		// Oid
 		tmpBuf.Write([]byte{byte(ObjectIdentifier), byte(len(oid))})
 		tmpBuf.Write(oid)
@@ -563,10 +606,10 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		case byte:
 			intBytes = []byte{byte(pdu.Value.(int))}
 		case int:
-			intBytes, err = marshalInt16(value)
+			intBytes, err = marshalInt32(value)
 			pdu.Check(err)
 		default:
-			return nil, fmt.Errorf("Unable to marshal PDU Integer; not byte or int.")
+			return nil, fmt.Errorf("unable to marshal PDU Integer; not byte or int")
 		}
 		tmpBuf.Write([]byte{byte(Integer), byte(len(intBytes))})
 		tmpBuf.Write(intBytes)
@@ -587,8 +630,11 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		case uint32:
 			intBytes, err = marshalUint32(value)
 			pdu.Check(err)
+		case uint:
+			intBytes, err = marshalUint32(uint32(value))
+			pdu.Check(err)
 		default:
-			return nil, fmt.Errorf("Unable to marshal pdu.Type %v; unknown pdu.Value %v", pdu.Type, pdu.Value)
+			return nil, fmt.Errorf("Unable to marshal pdu.Type %v; unknown pdu.Value %v[type=%v]", pdu.Type, pdu.Value, reflect.TypeOf(pdu.Value))
 		}
 		tmpBuf.Write([]byte{byte(pdu.Type), byte(len(intBytes))})
 		tmpBuf.Write(intBytes)
@@ -598,8 +644,7 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		pduBuf.WriteByte(byte(len(oid) + len(intBytes) + 4))
 		pduBuf.Write(tmpBuf.Bytes())
 
-	case OctetString:
-
+	case OctetString, BitString:
 		//Oid
 		tmpBuf.Write([]byte{byte(ObjectIdentifier), byte(len(oid))})
 		tmpBuf.Write(oid)
@@ -612,7 +657,7 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		case string:
 			octetStringBytes = []byte(value)
 		default:
-			return nil, fmt.Errorf("Unable to marshal PDU OctetString; not []byte or String.")
+			return nil, fmt.Errorf("unable to marshal PDU OctetString; not []byte or String")
 		}
 
 		var length []byte
@@ -620,7 +665,7 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		tmpBuf.WriteByte(byte(OctetString))
+		tmpBuf.WriteByte(byte(pdu.Type))
 		tmpBuf.Write(length)
 		tmpBuf.Write(octetStringBytes)
 
@@ -637,7 +682,6 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		pduBuf.Write(tmpBytes)
 
 	case ObjectIdentifier:
-
 		//Oid
 		tmpBuf.Write([]byte{byte(ObjectIdentifier), byte(len(oid))})
 		tmpBuf.Write(oid)
@@ -665,7 +709,6 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		pduBuf.Write(length)
 		pduBuf.Write(tmpBytes)
 
-	// TODO no tests
 	case IPAddress:
 		//Oid
 		tmpBuf.Write([]byte{byte(ObjectIdentifier), byte(len(oid))})
@@ -679,7 +722,7 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 			ip := net.ParseIP(value)
 			ipAddressBytes = ipv4toBytes(ip)
 		default:
-			return nil, fmt.Errorf("Unable to marshal PDU IPAddress; not []byte or String.")
+			return nil, fmt.Errorf("unable to marshal PDU IPAddress; not []byte or String")
 		}
 		tmpBuf.Write([]byte{byte(IPAddress), byte(len(ipAddressBytes))})
 		tmpBuf.Write(ipAddressBytes)
@@ -687,7 +730,42 @@ func marshalVarbind(pdu *SnmpPDU) ([]byte, error) {
 		pduBuf.WriteByte(byte(Sequence))
 		pduBuf.WriteByte(byte(len(oid) + len(ipAddressBytes) + 4))
 		pduBuf.Write(tmpBuf.Bytes())
-
+	case Counter64, OpaqueFloat, OpaqueDouble:
+		converters := map[Asn1BER]func(interface{}) ([]byte, error){
+			Counter64:    marshalUint64,
+			OpaqueFloat:  marshalFloat32,
+			OpaqueDouble: marshalFloat64,
+		}
+		tmpBuf.Write([]byte{byte(ObjectIdentifier), byte(len(oid))})
+		tmpBuf.Write(oid)
+		tmpBuf.WriteByte(byte(pdu.Type))
+		intBytes, err := converters[pdu.Type](pdu.Value)
+		pdu.Check(err)
+		tmpBuf.WriteByte(byte(len(intBytes)))
+		tmpBuf.Write(intBytes)
+		tmpBytes := tmpBuf.Bytes()
+		length, err := marshalLength(len(tmpBytes))
+		if err != nil {
+			return nil, err
+		}
+		// Sequence, length of oid + oid, then oid/oid data
+		pduBuf.WriteByte(byte(Sequence))
+		pduBuf.Write(length)
+		pduBuf.Write(tmpBytes)
+	case NoSuchInstance, NoSuchObject, EndOfMibView:
+		tmpBuf.Write([]byte{byte(ObjectIdentifier), byte(len(oid))})
+		tmpBuf.Write(oid)
+		tmpBuf.WriteByte(byte(pdu.Type))
+		tmpBuf.WriteByte(byte(EndOfContents))
+		tmpBytes := tmpBuf.Bytes()
+		length, err := marshalLength(len(tmpBytes))
+		if err != nil {
+			return nil, err
+		}
+		// Sequence, length of oid + oid, then oid/oid data
+		pduBuf.WriteByte(byte(Sequence))
+		pduBuf.Write(length)
+		pduBuf.Write(tmpBytes)
 	default:
 		return nil, fmt.Errorf("Unable to marshal PDU: unknown BER type %q", pdu.Type)
 	}
@@ -712,12 +790,12 @@ func (x *GoSNMP) unmarshalHeader(packet []byte, response *SnmpPacket) (int, erro
 
 	// First bytes should be 0x30
 	if PDUType(packet[0]) != Sequence {
-		return 0, fmt.Errorf("Invalid packet header\n")
+		return 0, fmt.Errorf("invalid packet header")
 	}
 
 	length, cursor := parseLength(packet)
 	if len(packet) != length {
-		return 0, fmt.Errorf("Error verifying packet sanity: Got %d Expected: %d\n", len(packet), length)
+		return 0, fmt.Errorf("error verifying packet sanity: Got %d Expected: %d", len(packet), length)
 	}
 	x.logPrintf("Packet sanity verified, we got all the bytes (%d)", length)
 
@@ -728,16 +806,22 @@ func (x *GoSNMP) unmarshalHeader(packet []byte, response *SnmpPacket) (int, erro
 	}
 
 	cursor += count
+	if cursor > len(packet) {
+		return 0, fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if version, ok := rawVersion.(int); ok {
 		response.Version = SnmpVersion(version)
 		x.logPrintf("Parsed version %d", version)
 	}
 
 	if response.Version == Version3 {
+		oldcursor := cursor
 		cursor, err = x.unmarshalV3Header(packet, cursor, response)
 		if err != nil {
 			return 0, err
 		}
+		x.logPrintf("UnmarshalV3Header done. [with SecurityParameters]. Header Size %d. Last 4 Bytes=[%v]", cursor-oldcursor, packet[cursor-4:cursor])
 	} else {
 		// Parse community
 		rawCommunity, count, err := parseRawField(packet[cursor:], "community")
@@ -745,6 +829,10 @@ func (x *GoSNMP) unmarshalHeader(packet []byte, response *SnmpPacket) (int, erro
 			return 0, fmt.Errorf("Error parsing community string: %s", err.Error())
 		}
 		cursor += count
+		if cursor > len(packet) {
+			return 0, fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+		}
+
 		if community, ok := rawCommunity.(string); ok {
 			response.Community = community
 			x.logPrintf("Parsed community %s", community)
@@ -757,9 +845,10 @@ func (x *GoSNMP) unmarshalPayload(packet []byte, cursor int, response *SnmpPacke
 	var err error
 	// Parse SNMP packet type
 	requestType := PDUType(packet[cursor])
+	x.logPrintf("UnmarshalPayload Meet PDUType %#x. Offset %v", requestType, cursor)
 	switch requestType {
 	// known, supported types
-	case GetResponse, GetNextRequest, GetBulkRequest, Report, SNMPv2Trap:
+	case GetResponse, GetNextRequest, GetBulkRequest, Report, SNMPv2Trap, GetRequest, SetRequest, InformRequest:
 		response.PDUType = requestType
 		err = x.unmarshalResponse(packet[cursor:], response)
 		if err != nil {
@@ -772,6 +861,7 @@ func (x *GoSNMP) unmarshalPayload(packet []byte, cursor int, response *SnmpPacke
 			return fmt.Errorf("Error in unmarshalTrapV1: %s", err.Error())
 		}
 	default:
+		x.logPrintf("UnmarshalPayload Meet Unknown PDUType %#x. Offset %v", requestType, cursor)
 		return fmt.Errorf("Unknown PDUType %#x", requestType)
 	}
 	return nil
@@ -782,7 +872,7 @@ func (x *GoSNMP) unmarshalResponse(packet []byte, response *SnmpPacket) error {
 
 	getResponseLength, cursor := parseLength(packet)
 	if len(packet) != getResponseLength {
-		return fmt.Errorf("Error verifying Response sanity: Got %d Expected: %d\n", len(packet), getResponseLength)
+		return fmt.Errorf("error verifying Response sanity: Got %d Expected: %d", len(packet), getResponseLength)
 	}
 	x.logPrintf("getResponseLength: %d", getResponseLength)
 
@@ -792,6 +882,10 @@ func (x *GoSNMP) unmarshalResponse(packet []byte, response *SnmpPacket) error {
 		return fmt.Errorf("Error parsing SNMP packet request ID: %s", err.Error())
 	}
 	cursor += count
+	if cursor > len(packet) {
+		return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if requestid, ok := rawRequestID.(int); ok {
 		response.RequestID = uint32(requestid)
 		x.logPrintf("requestID: %d", response.RequestID)
@@ -804,6 +898,10 @@ func (x *GoSNMP) unmarshalResponse(packet []byte, response *SnmpPacket) error {
 			return fmt.Errorf("Error parsing SNMP packet non repeaters: %s", err.Error())
 		}
 		cursor += count
+		if cursor > len(packet) {
+			return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+		}
+
 		if nonRepeaters, ok := rawNonRepeaters.(int); ok {
 			response.NonRepeaters = uint8(nonRepeaters)
 		}
@@ -814,6 +912,10 @@ func (x *GoSNMP) unmarshalResponse(packet []byte, response *SnmpPacket) error {
 			return fmt.Errorf("Error parsing SNMP packet max repetitions: %s", err.Error())
 		}
 		cursor += count
+		if cursor > len(packet) {
+			return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+		}
+
 		if maxRepetitions, ok := rawMaxRepetitions.(int); ok {
 			response.MaxRepetitions = uint8(maxRepetitions)
 		}
@@ -824,6 +926,10 @@ func (x *GoSNMP) unmarshalResponse(packet []byte, response *SnmpPacket) error {
 			return fmt.Errorf("Error parsing SNMP packet error: %s", err.Error())
 		}
 		cursor += count
+		if cursor > len(packet) {
+			return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+		}
+
 		if errorStatus, ok := rawError.(int); ok {
 			response.Error = SNMPError(errorStatus)
 			x.logPrintf("errorStatus: %d", uint8(errorStatus))
@@ -835,6 +941,10 @@ func (x *GoSNMP) unmarshalResponse(packet []byte, response *SnmpPacket) error {
 			return fmt.Errorf("Error parsing SNMP packet error index: %s", err.Error())
 		}
 		cursor += count
+		if cursor > len(packet) {
+			return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+		}
+
 		if errorindex, ok := rawErrorIndex.(int); ok {
 			response.ErrorIndex = uint8(errorindex)
 			x.logPrintf("error-index: %d", uint8(errorindex))
@@ -849,7 +959,7 @@ func (x *GoSNMP) unmarshalTrapV1(packet []byte, response *SnmpPacket) error {
 
 	getResponseLength, cursor := parseLength(packet)
 	if len(packet) != getResponseLength {
-		return fmt.Errorf("Error verifying Response sanity: Got %d Expected: %d\n", len(packet), getResponseLength)
+		return fmt.Errorf("error verifying Response sanity: Got %d Expected: %d", len(packet), getResponseLength)
 	}
 	x.logPrintf("getResponseLength: %d", getResponseLength)
 
@@ -859,6 +969,10 @@ func (x *GoSNMP) unmarshalTrapV1(packet []byte, response *SnmpPacket) error {
 		return fmt.Errorf("Error parsing SNMP packet error: %s", err.Error())
 	}
 	cursor += count
+	if cursor > len(packet) {
+		return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if Enterprise, ok := rawEnterprise.([]int); ok {
 		response.Enterprise = oidToString(Enterprise)
 		x.logPrintf("Enterprise: %+v", Enterprise)
@@ -870,6 +984,10 @@ func (x *GoSNMP) unmarshalTrapV1(packet []byte, response *SnmpPacket) error {
 		return fmt.Errorf("Error parsing SNMP packet error: %s", err.Error())
 	}
 	cursor += count
+	if cursor > len(packet) {
+		return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if AgentAddress, ok := rawAgentAddress.(string); ok {
 		response.AgentAddress = AgentAddress
 		x.logPrintf("AgentAddress: %s", AgentAddress)
@@ -881,6 +999,10 @@ func (x *GoSNMP) unmarshalTrapV1(packet []byte, response *SnmpPacket) error {
 		return fmt.Errorf("Error parsing SNMP packet error: %s", err.Error())
 	}
 	cursor += count
+	if cursor > len(packet) {
+		return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if GenericTrap, ok := rawGenericTrap.(int); ok {
 		response.GenericTrap = GenericTrap
 		x.logPrintf("GenericTrap: %d", GenericTrap)
@@ -892,6 +1014,10 @@ func (x *GoSNMP) unmarshalTrapV1(packet []byte, response *SnmpPacket) error {
 		return fmt.Errorf("Error parsing SNMP packet error: %s", err.Error())
 	}
 	cursor += count
+	if cursor > len(packet) {
+		return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if SpecificTrap, ok := rawSpecificTrap.(int); ok {
 		response.SpecificTrap = SpecificTrap
 		x.logPrintf("SpecificTrap: %d", SpecificTrap)
@@ -903,6 +1029,10 @@ func (x *GoSNMP) unmarshalTrapV1(packet []byte, response *SnmpPacket) error {
 		return fmt.Errorf("Error parsing SNMP packet error: %s", err.Error())
 	}
 	cursor += count
+	if cursor > len(packet) {
+		return fmt.Errorf("Error parsing SNMP packet, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if Timestamp, ok := rawTimestamp.(uint); ok {
 		response.Timestamp = Timestamp
 		x.logPrintf("Timestamp: %d", Timestamp)
@@ -916,13 +1046,22 @@ func (x *GoSNMP) unmarshalVBL(packet []byte, response *SnmpPacket) error {
 
 	var cursor, cursorInc int
 	var vblLength int
+
+	if len(packet) == 0 || cursor > len(packet) {
+		return fmt.Errorf("Truncated packet when unmarshalling a VBL, got length %d cursor %d", len(packet), cursor)
+	}
+
 	if packet[cursor] != 0x30 {
 		return fmt.Errorf("Expected a sequence when unmarshalling a VBL, got %x", packet[cursor])
 	}
 
 	vblLength, cursor = parseLength(packet)
+	if vblLength == 0 || vblLength > len(packet) {
+		return fmt.Errorf("Truncated packet when unmarshalling a VBL, packet length %d cursor %d", len(packet), cursor)
+	}
+
 	if len(packet) != vblLength {
-		return fmt.Errorf("Error verifying: packet length %d vbl length %d\n", len(packet), vblLength)
+		return fmt.Errorf("error verifying: packet length %d vbl length %d", len(packet), vblLength)
 	}
 	x.logPrintf("vblLength: %d", vblLength)
 
@@ -939,13 +1078,20 @@ func (x *GoSNMP) unmarshalVBL(packet []byte, response *SnmpPacket) error {
 
 		_, cursorInc = parseLength(packet[cursor:])
 		cursor += cursorInc
+		if cursor > len(packet) {
+			return fmt.Errorf("Error parsing OID Value: packet %d cursor %d", len(packet), cursor)
+		}
 
 		// Parse OID
 		rawOid, oidLength, err := parseRawField(packet[cursor:], "OID")
 		if err != nil {
 			return fmt.Errorf("Error parsing OID Value: %s", err.Error())
 		}
+
 		cursor += oidLength
+		if cursor > len(packet) {
+			return fmt.Errorf("Error parsing OID Value: truncated, packet length %d cursor %d", len(packet), cursor)
+		}
 
 		var oid []int
 		var ok bool
@@ -960,8 +1106,13 @@ func (x *GoSNMP) unmarshalVBL(packet []byte, response *SnmpPacket) error {
 		if err != nil {
 			return fmt.Errorf("Error decoding value: %v", err)
 		}
+
 		valueLength, _ := parseLength(packet[cursor:])
 		cursor += valueLength
+		if cursor > len(packet) {
+			return fmt.Errorf("Error decoding OID Value: truncated, packet length %d cursor %d", len(packet), cursor)
+		}
+
 		response.Variables = append(response.Variables, SnmpPDU{oidStr, v.Type, v.Value, x.Logger})
 	}
 	return nil
@@ -970,8 +1121,10 @@ func (x *GoSNMP) unmarshalVBL(packet []byte, response *SnmpPacket) error {
 // receive response from network and read into a byte array
 func (x *GoSNMP) receive() ([]byte, error) {
 	n, err := x.Conn.Read(x.rxBuf[:])
-	if err != nil {
-		return nil, fmt.Errorf("Error reading from UDP: %s", err.Error())
+	if err == io.EOF {
+		return nil, err
+	} else if err != nil {
+		return nil, fmt.Errorf("Error reading from socket: %s", err.Error())
 	}
 
 	if n == rxBufSize {
