@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 1.2.0 (2020-05-11)
+### Changed
+- Update the gosnmp library version.
+
 ## 1.1.3 (2020-02-28)
 ### Changed
 - Add Makefile missing variables

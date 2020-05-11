@@ -1,4 +1,4 @@
-// Copyright 2012-2018 The GoSNMP Authors. All rights reserved.  Use of this
+// Copyright 2012-2020 The GoSNMP Authors. All rights reserved.  Use of this
 // source code is governed by a BSD-style license that can be found in the
 // LICENSE file.
 
@@ -125,6 +125,12 @@ type Handler interface {
 	// SetRetries sets the Retries
 	SetRetries(retries int)
 
+	// GetExponentialTimeout gets the ExponentialTimeout
+	GetExponentialTimeout() bool
+
+	// SetExponentialTimeout sets the ExponentialTimeout
+	SetExponentialTimeout(value bool)
+
 	// Logger gets the Logger
 	Logger() Logger
 
@@ -246,6 +252,14 @@ func (x *snmpHandler) Retries() int {
 
 func (x *snmpHandler) SetRetries(retries int) {
 	x.GoSNMP.Retries = retries
+}
+
+func (x *snmpHandler) GetExponentialTimeout() bool {
+	return x.GoSNMP.ExponentialTimeout
+}
+
+func (x *snmpHandler) SetExponentialTimeout(value bool) {
+	x.GoSNMP.ExponentialTimeout = value
 }
 
 func (x *snmpHandler) Logger() Logger {

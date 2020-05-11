@@ -75,10 +75,10 @@
 			"revisionTime": "2016-01-10T10:55:54Z"
 		},
 		{
-			"checksumSHA1": "KLhihkim8UQV39V6Y6BXr+XTwus=",
+			"checksumSHA1": "0ifj9HEcA4EXZFmNJ2ejy1bCZRQ=",
 			"path": "github.com/soniah/gosnmp",
-			"revision": "3651b0e1a5302d5d5f6d47a2af02658f8bb36311",
-			"revisionTime": "2018-08-08T13:35:41Z",
+			"revision": "19a3e6384e3e70978a991e11ebdbcaee08ff91f4",
+			"revisionTime": "2020-04-27T13:29:49Z",
 			"tree": true
 		},
 		{
@@ -101,5 +101,5 @@
 			"tree": true
 		}
 	],
-	"rootPath": "github.com/preddy-newrelic/nri-snmp"
+	"rootPath": "github.com/newrelic/nri-snmp"
 }
