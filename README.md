@@ -36,7 +36,7 @@ For managing external dependencies [govendor tool](https://github.com/kardianos/
 
 ## Testing
 
-To run the test run
+To run the tests execute
 
 ```bash
 $ make test
