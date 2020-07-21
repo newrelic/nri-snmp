@@ -1,26 +1,18 @@
+[![Community Project header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Project.png)](https://opensource.newrelic.com/oss-category/#community-project)
+
 # New Relic Infrastructure Integration for SNMP
 
-New Relic Infrastructure Integration for SNMP captures critical performance
-metrics and inventory reported by an SNMP server.
+New Relic infrastructure integration for SNMP captures critical performance
+metrics and inventory reported by a SNMP server.
 
-Metrics data is obtained by making SNMP GET requests for configured list of OIDs and SNMP walk requests for the configured list of SNMP tables.
+Metric data is obtained by making SNMP GET requests for configured list of OIDs and SNMP walk requests for the configured list of SNMP tables.
 
-See our [documentation web site](https://docs.newrelic.com/docs/integrations/host-integrations/host-integrations-list/snmp-monitoring-integration) for more details.
+## Installing and using New Relic infrastructure agent Chef cookbook
 
-## Usage
+* [Installation and usage instructions](https://docs.newrelic.com/docs/integrations/host-integrations/host-integrations-list/snmp-monitoring-integration)
 
-This is the description about how to run the SNMP Integration with New Relic
-Infrastructure agent, so it is required to have the agent installed
-(see
-[agent installation](https://docs.newrelic.com/docs/infrastructure/new-relic-infrastructure/installation/install-infrastructure-linux)).
 
-In order to use the SNMP Integration it is required to configure
-`snmp-config.yml` file. Depending on your needs, specify all instances that
-you want to monitor with correct arguments.
-
-## Integration development usage
-
-Assuming that you have the source code and Go tool installed you can build and run the SNMP Integration locally.
+## Building
 
 * After cloning this repository, go to the directory of the SNMP Integration and build it
 
@@ -40,34 +32,28 @@ $ ./bin/nri-snmp
 $ ./bin/nri-snmp -help
 ```
 
-For managing external dependencies [govendor tool](https://github.com/kardianos/govendor) is used. It is required to lock all external dependencies to specific version (if possible) into vendor directory.
+For managing external dependencies [govendor tool](https://github.com/kardianos/govendor) is used. It is required to lock all external dependencies to a specific version (if possible) into the vendor directory.
 
-## Contributing Code
+## Testing
 
-We welcome code contributions (in the form of pull requests) from our user
-community. Before submitting a pull request please review [these guidelines](https://github.com/newrelic/nri-SNMP/blob/master/CONTRIBUTING.md).
+To run the tests execute
 
-Following these helps us efficiently review and incorporate your contribution
-and avoid breaking your code with future changes to the agent.
-
-## Custom Integrations
-
-To extend your monitoring solution with custom metrics, we offer the Integrations
-Golang SDK which can be found on [github](https://github.com/newrelic/infra-integrations-sdk).
-
-Refer to [our docs site](https://docs.newrelic.com/docs/infrastructure/integrations-sdk/get-started/intro-infrastructure-integrations-sdk)
-to get help on how to build your custom integrations.
+```bash
+$ make test
+```
 
 ## Support
 
-You can find more detailed documentation [on our website](http://newrelic.com/docs),
-and specifically in the [Infrastructure category](https://docs.newrelic.com/docs/infrastructure).
+New Relic hosts and moderates an online forum where customers can interact with New Relic employees as well as other customers to get help and share best practices. Like all official New Relic open source projects, there's a related Community topic in the New Relic Explorers Hub. You can find this project's topic/threads here:
 
-If you can't find what you're looking for there, reach out to us on our [support
-site](http://support.newrelic.com/) or our [community forum](http://forum.newrelic.com)
-and we'll be happy to help you.
+https://discuss.newrelic.com/c/support-products-agents/new-relic-infrastructure
 
-Find a bug? Contact us via [support.newrelic.com](http://support.newrelic.com/),
-or email support@newrelic.com.
+# Contributing
 
-New Relic, Inc.
+We encourage contributions to improve New Relic infrastructure agent Chef cookbook! Keep in mind when you submit your pull request, you'll need to sign the CLA via the click-through using CLA-Assistant. You only have to sign the CLA one time per project.
+If you have any questions, or to execute our corporate CLA, required if your contribution is on behalf of a company,  please drop us an email at opensource@newrelic.com.
+
+## License
+New Relic Infrastructure Integration for SNMP is licensed under the [Apache 2.0](http://apache.org/licenses/LICENSE-2.0.txt) License.
+
+The New Relic Infrastructure Integration for SNMP also uses source code from third-party libraries. You can find full details on which libraries are used and the terms under which they are licensed in the [third-party notices](./THIRD_PARTY_NOTICES.md) document.
