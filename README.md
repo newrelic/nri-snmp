@@ -1,42 +1,42 @@
 [![Community Project header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Project.png)](https://opensource.newrelic.com/oss-category/#community-project)
 
-# New Relic Infrastructure Integration for SNMP
+# New Relic Infrastructure integration for SNMP
 
-New Relic infrastructure integration for SNMP captures critical performance
-metrics and inventory reported by a SNMP server.
+The New Relic integration for SNMP captures critical performance metrics and inventory reported by an SNMP server.
 
-Metric data is obtained by making SNMP GET requests for configured list of OIDs and SNMP walk requests for the configured list of SNMP tables.
+Metric data is obtained by making GET requests for configured list of OIDs and SNMP walk requests for the configured list of SNMP tables.
 
-## Installing and using New Relic infrastructure agent Chef cookbook
+## Install
 
-* [Installation and usage instructions](https://docs.newrelic.com/docs/integrations/host-integrations/host-integrations-list/snmp-monitoring-integration)
+For installation and usage instructions, see our [official documentation](https://docs.newrelic.com/docs/integrations/host-integrations/host-integrations-list/snmp-monitoring-integration).
 
+## Build
 
-## Building
-
-* After cloning this repository, go to the directory of the SNMP Integration and build it
+After cloning this repository, go to the directory of the SNMP Integration and build it:
 
 ```bash
 $ make
 ```
 
-* The command above will execute the tests for the SNMP Integration and build an executable file called `nri-snmp` under `bin` directory. Run `nri-snmp`:
+The command above executes the tests for the SNMP Integration and builds an executable file named `nri-snmp` under `bin` directory. 
+
+To start the integration, run `nri-snmp`:
 
 ```bash
 $ ./bin/nri-snmp
 ```
 
-* If you want to know more about usage of `./bin/nri-snmp` check
+If you want to know more about the usage of `./bin/nri-snmp`, pass the `-help` parameter:
 
 ```bash
 $ ./bin/nri-snmp -help
 ```
 
-For managing external dependencies [govendor tool](https://github.com/kardianos/govendor) is used. It is required to lock all external dependencies to a specific version (if possible) into the vendor directory.
+External dependencies are managed through the [govendor tool](https://github.com/kardianos/govendor). Locking all external dependencies to a specific version (if possible) into the vendor directory is required.
 
 ## Testing
 
-To run the tests execute
+To run the tests execute:
 
 ```bash
 $ make test
