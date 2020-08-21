@@ -18,7 +18,7 @@ After cloning this repository, go to the directory of the SNMP Integration and b
 $ make
 ```
 
-The command above executes the tests for the SNMP Integration and builds an executable file named `nri-snmp` under `bin` directory. 
+The command above executes the tests for the SNMP integration and builds an executable file named `nri-snmp` under `bin` directory. 
 
 To start the integration, run `nri-snmp`:
 
