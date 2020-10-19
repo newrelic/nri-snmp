@@ -21,3 +21,7 @@ Thumbs.db
 #########
 test-metrics.yml
 target/
+
+dist
+*.gpg
+.idea
