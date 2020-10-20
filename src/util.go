@@ -124,7 +124,7 @@ func connect(targetHost string, targetPort int) error {
 		log.Error(err.Error())
 		return fmt.Errorf("Error connecting to target %s: %s", targetHost, err)
 	}
-	log.Info("Connecting to target: " + targetHost)
+	log.Info("Connecting to target: %v:%p", targetHost, targetPort)
 	return nil
 }
 

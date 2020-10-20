@@ -1,0 +1,15 @@
+---
+collect:
+  - device: NR-SNMP-MIB
+    metric_sets:
+      - name: scalar metrics
+        type: scalar
+        event_type: SNMPSample
+        metrics:
+          - metric_name: newrelicAttribute
+            metric_type: delta
+            oid: .1.3.6.1.2.1.1.1.0
+          - metric_name: newrelicRate
+            oid: .1.3.6.1.2.1.2.2.1.20.1
+          - metric_name: newrelicRatea
+            oid: .1.3.6.1.4.1.2552.200.300.1.3.1.15
