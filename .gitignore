@@ -21,3 +21,10 @@ Thumbs.db
 #########
 test-metrics.yml
 target/
+
+#  Do not commit any customer files
+customer.*
+
+# Do not commit the binaries
+nri-snmp
+nri-snmp.exe

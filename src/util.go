@@ -106,7 +106,7 @@ func connect(targetHost string, targetPort int) error {
 			Port:      uint16(targetPort),
 			Version:   gosnmp.Version2c,
 			Community: community,
-			Timeout:   time.Duration(10 * time.Second), // Timeout better suited to walking
+			Timeout:   10 * time.Second, // Timeout better suited to walking
 			MaxOids:   8900,
 		}
 	}
@@ -116,7 +116,7 @@ func connect(targetHost string, targetPort int) error {
 		log.Error(err.Error())
 		return fmt.Errorf("Error connecting to target %s: %s", targetHost, err)
 	}
-	log.Info("Connecting to target: " + targetHost)
+	log.Info("Connecting to target: %v:%p", targetHost, targetPort)
 	return nil
 }
 
