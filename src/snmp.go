@@ -17,17 +17,20 @@ import (
 
 type argumentList struct {
 	sdkArgs.DefaultArgumentList
-	SNMPHost        string `default:"127.0.0.1" help:"Hostname or IP where the SNMP server is running."`
-	SNMPPort        int    `default:"161" help:"Port on which SNMP server is listening."`
-	Community       string `default:"public" help:"SNMP Version 2 Community string "`
-	V3              bool   `default:"false" help:"Use SNMP Version 3."`
-	SecurityLevel   string `default:"" help:"Valid values are noAuthnoPriv, authNoPriv or authPriv"`
-	Username        string `default:"" help:"The security name that identifies the SNMPv3 user."`
-	AuthProtocol    string `default:"SHA" help:"The algorithm used for SNMPv3 authentication (SHA or MD5)."`
-	AuthPassphrase  string `default:"" help:"The password used to generate the key used for SNMPv3 authentication."`
-	PrivProtocol    string `default:"AES" help:"The algorithm used for SNMPv3 message integrity."`
-	PrivPassphrase  string `default:"" help:"The password used to generate the key used to verify SNMPv3 message integrity."`
-	CollectionFiles string `default:"" help:"A comma separated list of full paths to metrics configuration files"`
+	SNMPHost           string `default:"127.0.0.1" help:"Hostname or IP where the SNMP server is running."`
+	SNMPPort           int    `default:"161" help:"Port on which SNMP server is listening."`
+	Timeout            int    `default:"10" help:"The number of seconds to wait before a request times out."`
+	Retries            int    `default:"0" help:"The number of attemps to fetch metrics."`
+	ExponentialTimeout bool   `default:"false" help:"Double timeout in each attempt."`
+	Community          string `default:"public" help:"SNMP Version 2 Community string "`
+	V3                 bool   `default:"false" help:"Use SNMP Version 3."`
+	SecurityLevel      string `default:"" help:"Valid values are noAuthnoPriv, authNoPriv or authPriv"`
+	Username           string `default:"" help:"The security name that identifies the SNMPv3 user."`
+	AuthProtocol       string `default:"SHA" help:"The algorithm used for SNMPv3 authentication (SHA or MD5)."`
+	AuthPassphrase     string `default:"" help:"The password used to generate the key used for SNMPv3 authentication."`
+	PrivProtocol       string `default:"AES" help:"The algorithm used for SNMPv3 message integrity."`
+	PrivPassphrase     string `default:"" help:"The password used to generate the key used to verify SNMPv3 message integrity."`
+	CollectionFiles    string `default:"" help:"A comma separated list of full paths to metrics configuration files"`
 }
 
 const (
