@@ -69,9 +69,8 @@ func createMetric(metricName string, metricType metric.SourceType, pdu gosnmp.Sn
 		boolValue := pdu.Value.(bool)
 		if boolValue {
 			return ms.SetMetric(metricName, 1, sourceType)
-		} else {
-			return ms.SetMetric(metricName, 0, sourceType)
 		}
+		return ms.SetMetric(metricName, 0, sourceType)
 	case gosnmp.BitString:
 		return fmt.Errorf("unsupported PDU type[BitString] for %v", metricName)
 	case gosnmp.TimeTicks:

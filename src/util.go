@@ -27,7 +27,9 @@ func connect(targetHost string, targetPort int) error {
 				Target:             targetHost,
 				Port:               uint16(targetPort),
 				Version:            gosnmp.Version3,
-				Timeout:            time.Duration(10) * time.Second,
+				Timeout:            time.Duration(uint16(args.Timeout)) * time.Second,
+				ExponentialTimeout: args.ExponentialTimeout,
+				Retries:            int(args.Retries),
 				SecurityModel:      gosnmp.UserSecurityModel,
 				MsgFlags:           msgFlags,
 				SecurityParameters: &gosnmp.UsmSecurityParameters{UserName: args.Username},
@@ -47,12 +49,14 @@ func connect(targetHost string, targetPort int) error {
 				return fmt.Errorf("Must specify valid auth_protocol for SNMP v3 (valid values are SHA or MD5)")
 			}
 			theSNMP = &gosnmp.GoSNMP{
-				Target:        targetHost,
-				Port:          uint16(targetPort),
-				Version:       gosnmp.Version3,
-				Timeout:       time.Duration(10) * time.Second,
-				SecurityModel: gosnmp.UserSecurityModel,
-				MsgFlags:      msgFlags,
+				Target:             targetHost,
+				Port:               uint16(targetPort),
+				Version:            gosnmp.Version3,
+				Timeout:            time.Duration(uint16(args.Timeout)) * time.Second,
+				ExponentialTimeout: args.ExponentialTimeout,
+				Retries:            int(args.Retries),
+				SecurityModel:      gosnmp.UserSecurityModel,
+				MsgFlags:           msgFlags,
 				SecurityParameters: &gosnmp.UsmSecurityParameters{UserName: args.Username,
 					AuthenticationProtocol:   authProtocol,
 					AuthenticationPassphrase: args.AuthPassphrase,
@@ -82,12 +86,14 @@ func connect(targetHost string, targetPort int) error {
 			}
 
 			theSNMP = &gosnmp.GoSNMP{
-				Target:        targetHost,
-				Port:          uint16(targetPort),
-				Version:       gosnmp.Version3,
-				Timeout:       time.Duration(10) * time.Second,
-				SecurityModel: gosnmp.UserSecurityModel,
-				MsgFlags:      msgFlags,
+				Target:             targetHost,
+				Port:               uint16(targetPort),
+				Version:            gosnmp.Version3,
+				Timeout:            time.Duration(uint16(args.Timeout)) * time.Second,
+				Retries:            int(args.Retries),
+				ExponentialTimeout: args.ExponentialTimeout,
+				SecurityModel:      gosnmp.UserSecurityModel,
+				MsgFlags:           msgFlags,
 				SecurityParameters: &gosnmp.UsmSecurityParameters{UserName: args.Username,
 					AuthenticationProtocol:   authProtocol,
 					AuthenticationPassphrase: args.AuthPassphrase,
@@ -102,12 +108,14 @@ func connect(targetHost string, targetPort int) error {
 	} else {
 		community := strings.TrimSpace(args.Community)
 		theSNMP = &gosnmp.GoSNMP{
-			Target:    targetHost,
-			Port:      uint16(targetPort),
-			Version:   gosnmp.Version2c,
-			Community: community,
-			Timeout:   time.Duration(10 * time.Second), // Timeout better suited to walking
-			MaxOids:   8900,
+			Target:             targetHost,
+			Port:               uint16(targetPort),
+			Version:            gosnmp.Version2c,
+			Community:          community,
+			Timeout:            time.Duration(uint16(args.Timeout)) * time.Second, // Timeout better suited to walking
+			ExponentialTimeout: args.ExponentialTimeout,
+			Retries:            int(args.Retries),
+			MaxOids:            8900,
 		}
 	}
 
