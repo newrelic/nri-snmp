@@ -97,7 +97,7 @@ archives:
       - nri-win
     name_template: "{{ .ProjectName }}-{{ .Arch }}.{{ .Version }}_dirty"
     files:
-      - snmp-win-config.yml.sample
+      - snmp-config.yml.sample
       - snmp-win-definition.yml
     format: zip
 

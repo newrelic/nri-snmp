@@ -2,7 +2,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
     <?define Version = "$(var.IntegrationVersion)" ?>
     <?define ProductId = "*" ?>
-    <?define UpgradeCode = "{696ac326-9b00-4f0e-8bd3-cf4d636f409e}" ?>
+    <?define UpgradeCode = "{adaab1b5-3b18-46c3-90be-1bfae8408e5c}" ?>
 
     <Product Id="$(var.ProductId)"
              Name="New Relic Infrastructure Integration, nri-$(var.IntegrationName)"
@@ -90,8 +90,8 @@
             <Component Id="CMP_NRI_$(var.IntegrationName)_CONFIG_YML" Guid="23d68a4e-41b8-41f0-829b-56c44f3777c6" Win64="yes"
                        NeverOverwrite="yes" Permanent="yes">
                 <File Id="FILE_NRI_$(var.IntegrationName)_CONFIG_YML"
-                      Name="$(var.IntegrationName)-win-config.yml.sample"
-                      Source="$(var.BinariesPath)New Relic\newrelic-infra\integrations.d\$(var.IntegrationName)-win-config.yml.sample"
+                      Name="$(var.IntegrationName)-config.yml.sample"
+                      Source="$(var.BinariesPath)New Relic\newrelic-infra\integrations.d\$(var.IntegrationName)-config.yml.sample"
                       KeyPath="yes"/>
             </Component>
         </ComponentGroup>
