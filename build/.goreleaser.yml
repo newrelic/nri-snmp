@@ -45,13 +45,18 @@ nfpms:
     formats:
       - deb
     bindir: "/var/db/newrelic-infra/newrelic-integrations/bin"
-    files:
-      "snmp-config.yml.sample": "/etc/newrelic-infra/integrations.d/snmp-config.yml.sample"
-      "CHANGELOG.md": "/usr/share/doc/nri-snmp/CHANGELOG.md"
-      "README.md":  "/usr/share/doc/nri-snmp/README.md"
-      "LICENSE": "/usr/share/doc/nri-snmp/LICENSE"
-    config_files:
-      "snmp-definition.yml": "/var/db/newrelic-infra/newrelic-integrations/snmp-definition.yml"
+    contents:
+      - src: snmp-config.yml.sample
+        dst: /etc/newrelic-infra/integrations.d/snmp-config.yml.sample
+      - src: CHANGELOG.md
+        dst: /usr/share/doc/nri-snmp/CHANGELOG.md
+      - src: README.md
+        dst: /usr/share/doc/nri-snmp/README.md
+      - src: LICENSE
+        dst: /usr/share/doc/nri-snmp/LICENSE
+      - src: snmp-definition.yml
+        dst: /var/db/newrelic-infra/newrelic-integrations/snmp-definition.yml
+        type: config
     dependencies:
       - "newrelic-infra"
 
@@ -68,13 +73,18 @@ nfpms:
     formats:
       - rpm
     bindir: "/var/db/newrelic-infra/newrelic-integrations/bin"
-    files:
-      "snmp-config.yml.sample": "/etc/newrelic-infra/integrations.d/snmp-config.yml.sample"
-      "CHANGELOG.md": "/usr/share/doc/nri-snmp/CHANGELOG.md"
-      "README.md":  "/usr/share/doc/nri-snmp/README.md"
-      "LICENSE": "/usr/share/doc/nri-snmp/LICENSE"
-    config_files:
-      "snmp-definition.yml": "/var/db/newrelic-infra/newrelic-integrations/snmp-definition.yml"
+    contents:
+      - src: snmp-config.yml.sample
+        dst: /etc/newrelic-infra/integrations.d/snmp-config.yml.sample
+      - src: CHANGELOG.md
+        dst: /usr/share/doc/nri-snmp/CHANGELOG.md
+      - src: README.md
+        dst: /usr/share/doc/nri-snmp/README.md
+      - src: LICENSE
+        dst: /usr/share/doc/nri-snmp/LICENSE
+      - src: snmp-definition.yml
+        dst: /var/db/newrelic-infra/newrelic-integrations/snmp-definition.yml
+        type: config
     dependencies:
       - "newrelic-infra"
     overrides:
