@@ -21,3 +21,18 @@ Thumbs.db
 #########
 test-metrics.yml
 target/
+
+# Local development tools/files
+.idea
+.env
+.envrc
+*.gpg
+
+# build files
+src/versioninfo.json
+src/resource.syso
+
+# CICD
+dist/
+bin/
+*.gpg

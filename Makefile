@@ -4,8 +4,6 @@ INTEGRATION  := snmp
 BINARY_NAME   = nri-$(INTEGRATION)
 WORKDIR      := $(shell pwd)
 GO_FILES     := ./src/
-TARGET       := target
-TARGET_DIR    = $(WORKDIR)/$(TARGET)
 GO_PKGS      := $(shell go list ./... | grep -v "/vendor/")
 GOTOOLS       = github.com/kardianos/govendor \
                 gopkg.in/alecthomas/gometalinter.v2 \
@@ -58,7 +56,8 @@ test: deps
 	@gocov test $(GO_PKGS) | gocov-xml > coverage.xml
 
 # Include thematic Makefiles
-include Makefile-*.mk
+include $(CURDIR)/build/ci.mk
+include $(CURDIR)/build/release.mk
 
 check-version:
 ifdef GOOS

@@ -5,7 +5,9 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	sdkArgs "github.com/newrelic/infra-integrations-sdk/args"
@@ -31,17 +33,19 @@ type argumentList struct {
 	PrivProtocol       string `default:"AES" help:"The algorithm used for SNMPv3 message integrity."`
 	PrivPassphrase     string `default:"" help:"The password used to generate the key used to verify SNMPv3 message integrity."`
 	CollectionFiles    string `default:"" help:"A comma separated list of full paths to metrics configuration files"`
+	ShowVersion        bool   `default:"false" help:"Print build information and exit"`
 }
 
 const (
-	integrationName    = "com.newrelic.snmp"
-	integrationVersion = "1.2.1"
+	integrationName = "com.newrelic.snmp"
 )
 
 var (
-	args argumentList
+	args               argumentList
+	integrationVersion = "0.0.0"
+	gitCommit          = ""
+	buildDate          = ""
 )
-
 var theSNMP *gosnmp.GoSNMP
 var targetHost string
 var targetPort int
@@ -52,6 +56,18 @@ func main() {
 	if err != nil {
 		log.Error(err.Error())
 		return
+	}
+
+	if args.ShowVersion {
+		fmt.Printf(
+			"New Relic %s integration Version: %s, Platform: %s, GoVersion: %s, GitCommit: %s, BuildDate: %s\n",
+			strings.Title(strings.Replace(integrationName, "com.newrelic.", "", 1)),
+			integrationVersion,
+			fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+			runtime.Version(),
+			gitCommit,
+			buildDate)
+		os.Exit(0)
 	}
 
 	targetHost = strings.TrimSpace(args.SNMPHost)
