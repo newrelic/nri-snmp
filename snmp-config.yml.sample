@@ -10,21 +10,17 @@ integration_name: com.newrelic.snmp
 
 instances:
   - name: <INSTANCE IDENTIFIER>
-    command: metrics
+    # gets metrics and inventory
+    command: all_data
     arguments:
       snmp_host: localhost
       snmp_port: 161
       community: public
-      collection_files: "/etc/newrelic-infra/integrations.d/snmp-metrics.yml"
-    labels:
-      key1: <LABEL_VALUE>
 
-  - name: <OTHER INSTANCE IDENTIFIER>
-    command: inventory
-    arguments:
-      snmp_host: localhost
-      snmp_port: 161
-      community: public
+      # path to the file containing metrics to be collected.
+      # Example:
+      # - linux: "/etc/newrelic-infra/integrations.d/snmp-metrics.yml"
+      # - windows: "c:\progra~1\newreli~1\newrelic-infra\integrations.d\snmp-metrics.yml"
       collection_files: "/etc/newrelic-infra/integrations.d/snmp-metrics.yml"
     labels:
       key1: <LABEL_VALUE>

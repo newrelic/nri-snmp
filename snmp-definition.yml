@@ -16,19 +16,4 @@ commands:
     command:
       - ./bin/nri-snmp
     interval: 30
-  metrics:
-    command:
-      - ./bin/nri-snmp
-      - --metrics
-    interval: 30
-  inventory:
-    command:
-      - ./bin/nri-snmp
-      - --inventory
     prefix: config/snmp
-    interval: 30
-  events:
-    command:
-    - ./bin/nri-snmp
-    - --events
-    interval: 30
