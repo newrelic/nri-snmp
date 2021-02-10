@@ -98,6 +98,11 @@ jobs:
           password: ${{ secrets.OHAI_DOCKER_HUB_PASSWORD }}
       - name: Pre release
         run: make ci/prerelease
+      - name: Test package installability
+        uses: newrelic/integrations-pkg-test-action/linux@v1
+        with:
+          tag: ${{ env.TAG }}
+          integration: nri-${{ env.INTEGRATION }}
       - name: Notify failure via Slack
         if: ${{ failure() }}
         uses: archive/github-actions-slack@master
@@ -118,6 +123,10 @@ jobs:
     strategy:
       matrix:
         goarch: [amd64,386]
+        test-upgrade: [true,false]
+        exclude:
+          - goarch: 386
+            test-upgrade: true
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -134,7 +143,15 @@ jobs:
         shell: pwsh
         run: |
           build\windows\package_msi.ps1 -integration "$env:INTEGRATION" -arch ${{ matrix.goarch }} -tag "$env:TAG" -pfx_passphrase "$env:PFX_PASSPHRASE" -pfx_certificate_description "$env:PFX_CERTIFICATE_DESCRIPTION"
+      - name: Test win packages installation
+        uses: newrelic/integrations-pkg-test-action/windows@v1
+        with:
+          tag: ${{ env.TAG }}
+          integration: nri-${{ env.INTEGRATION }}
+          arch: ${{ matrix.goarch }}
+          upgrade: ${{ matrix.test-upgrade }}
       - name: Upload MSI to GH
+        if: startsWith(matrix.test-upgrade, 'false')
         shell: bash
         run: |
           build/windows/upload_msi.sh ${INTEGRATION} ${{ matrix.goarch }} ${TAG}
