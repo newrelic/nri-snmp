@@ -98,3 +98,68 @@ snmpwalk \
   snmp.example:161 \ # The location of the endpoint
   1.3.6.1.4.1.52032 \ # OID to start walking through
 ```
+
+## Debugging SNMP values
+
+If the integration is connecting correctly but not producing the correct metrics then there are two options:
+
+* Connect to the device and play with the config till it works
+* Take a sample of the output and replay it locally
+
+### Capturing production data to use locally
+
+You must be able to connect to device and run `snmpwalk` against it.
+To get a backup you need to run the `snmpwalk` command as follows:
+
+```shell
+$ snmpwalk -One <connection arguments>
+```
+
+Example, if you spin up the Docker Compose file in `build/troubleshooting` folder either by:
+
+* `docker-compose -f ./build/troubleshooting/docker-compose.yml up`
+* `make docker-snmp-example`
+
+This spins up mock SNMP server with some canned data.
+To connect to it and make a copy of the data just run:
+
+```shell
+$ snmpwalk -One  -v2c -c public 127.0.0.1:1024 > toubleshooting.snmpwalk
+```
+
+This creates a file called `toubleshooting.snmpwalk` which we can replay back locally.
+
+### Replaying the data
+
+Once you have the file place it in the route of the project and run:
+
+```shell
+$ make docker-snmp-troubleshooting 
+```
+
+This spins up a Docker container with the file and creates a stub SNMP server that will serve you back the data in `toubleshooting.snmpwalk`.
+You can see this by running snmp work against it as follows:
+
+```shell
+$ snmpwalk -Of -v2c -c toubleshooting 127.0.0.1:1024
+```
+
+You are now ready to run `nri-snmp` against it and check why the config does not produce the data you expect.
+To do this you need to make sure you have the collections file you are debugging (e.g. `toubleshooting-collections.yml`).
+Then run:
+
+```shell
+$ nri-snmp -verbose -snmp_host localhost -collection_files <path to toubleshooting-collections.yml> -snmp_port 1024 -community toubleshooting | jq .
+```
+
+If you're just built this image from the example SNMP server you can run the following to get some data:
+
+```shell
+$ nri-snmp -verbose -snmp_host localhost -collection_files $PWD/build/troubleshooting/toubleshooting-collections-example.yml  -snmp_port 1024 -community toubleshooting | jq .
+```
+
+This will give you the same data as if you have run it against the community you made the capture from:
+
+```shell
+$ nri-snmp -verbose -snmp_host localhost -collection_files $PWD/build/troubleshooting/toubleshooting-collections-example.yml  -snmp_port 1024 -community public | jq .
+```

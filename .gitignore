@@ -23,7 +23,7 @@ test-metrics.yml
 target/
 
 #  Do not commit any customer files
-customer.*
+*.snmpwalk
 
 # Do not commit the binaries
 nri-snmp
