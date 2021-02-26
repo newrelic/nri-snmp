@@ -1,3 +1,0 @@
----
-collect:
-collect:- device: SM-SNMP-MIB  metric_sets:  - name: SMScalarSet    type: scalar    event_type: SNMP    metrics:

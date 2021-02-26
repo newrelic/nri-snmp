@@ -10,9 +10,9 @@ USER snmpsim
 ENTRYPOINT ["snmpsimd.py"]
 CMD ["--agent-udpv4-endpoint=0.0.0.0:1024"]
 
-FROM base AS toubleshooting
+FROM base AS troubleshooting
 
-ARG SNMPWAL_FILE=toubleshooting.snmpwalk
+ARG SNMPWAL_FILE=troubleshooting.snmpwalk
 COPY ${SNMPWAL_FILE} /data/
 
 CMD ["--data-dir=/data", "--agent-udpv4-endpoint=0.0.0.0:1024"]
