@@ -1,0 +1,9 @@
+---
+version: "3.9"
+services:
+  sample-snmp:
+    build:
+      context: .
+      target: base
+    ports:
+      - "1024:1024/udp"
