@@ -48,6 +48,8 @@ nfpms:
     contents:
       - src: snmp-config.yml.sample
         dst: /etc/newrelic-infra/integrations.d/snmp-config.yml.sample
+      - src: snmp-metrics.yml.sample
+        dst: /etc/newrelic-infra/integrations.d/snmp-metrics.yml.sample
       - src: CHANGELOG.md
         dst: /usr/share/doc/nri-snmp/CHANGELOG.md
       - src: README.md
@@ -76,6 +78,8 @@ nfpms:
     contents:
       - src: snmp-config.yml.sample
         dst: /etc/newrelic-infra/integrations.d/snmp-config.yml.sample
+      - src: snmp-metrics.yml.sample
+        dst: /etc/newrelic-infra/integrations.d/snmp-metrics.yml.sample
       - src: CHANGELOG.md
         dst: /usr/share/doc/nri-snmp/CHANGELOG.md
       - src: README.md
