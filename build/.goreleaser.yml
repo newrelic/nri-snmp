@@ -103,6 +103,7 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Version }}_{{ .Arch }}_dirty"
     files:
       - snmp-config.yml.sample
+      - snmp-metrics.yml.sample
       - snmp-definition.yml
     format: tar.gz
 
@@ -112,6 +113,7 @@ archives:
     name_template: "{{ .ProjectName }}-{{ .Arch }}.{{ .Version }}_dirty"
     files:
       - snmp-config.yml.sample
+      - snmp-metrics.yml.sample
       - snmp-win-definition.yml
     format: zip
 
