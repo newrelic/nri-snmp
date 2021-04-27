@@ -57,7 +57,6 @@
           },
           "metrics": {
             "type": "array",
-            "minItems": 15,
             "items": [
               {
                 "type": "object",
