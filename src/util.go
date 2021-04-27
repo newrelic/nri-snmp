@@ -77,7 +77,8 @@ func connect(targetHost string, targetPort int) error {
 			}
 
 			privProtocolArg := strings.ToUpper(strings.TrimSpace(args.PrivProtocol))
-			privProtocol := gosnmp.AES
+
+			var privProtocol gosnmp.SnmpV3PrivProtocol
 			if privProtocolArg == "AES" {
 				privProtocol = gosnmp.AES
 			} else if privProtocolArg == "DES" {
