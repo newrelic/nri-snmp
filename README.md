@@ -32,7 +32,6 @@ If you want to know more about the usage of `./bin/nri-snmp`, pass the `-help` p
 $ ./bin/nri-snmp -help
 ```
 
-External dependencies are managed through the [govendor tool](https://github.com/kardianos/govendor). Locking all external dependencies to a specific version (if possible) into the vendor directory is required.
 
 ## Testing
 

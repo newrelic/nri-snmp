@@ -29,10 +29,6 @@ tools-update: check-version
 
 deps: tools
 
-deps-only:
-	@echo "=== $(INTEGRATION) === [ deps ]: Installing package dependencies required by the project..."
-	@./bin/golangci-lint run
-
 validate: deps
 	@echo "=== $(INTEGRATION) === [ validate ]: Validating source code running gometalinter..."
 	@./bin/golangci-lint run
@@ -45,7 +41,7 @@ compile: deps
 	@echo "=== $(INTEGRATION) === [ compile ]: Building $(BINARY_NAME)..."
 	@go build -o bin/$(BINARY_NAME) ./src
 
-compile-only: deps-only
+compile-only:
 	@echo "=== $(INTEGRATION) === [ compile ]: Building $(BINARY_NAME)..."
 	@go build -o bin/$(BINARY_NAME) ./src
 
