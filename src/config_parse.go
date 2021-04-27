@@ -178,7 +178,7 @@ func parseCollection(c *collectionParser) ([]*collection, error) {
 				}
 				newIndex := &index{
 					name: indexParser.Name,
-					oid:  indexParser.Oid,
+					oid:  indexOid,
 				}
 				indexes = append(indexes, newIndex)
 			}

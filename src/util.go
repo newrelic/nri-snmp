@@ -38,7 +38,7 @@ func connect(targetHost string, targetPort int) error {
 			msgFlags := gosnmp.AuthNoPriv
 			authProtocolArg := strings.ToUpper(strings.TrimSpace(args.AuthProtocol))
 
-			authProtocol := gosnmp.SHA
+			var authProtocol gosnmp.SnmpV3AuthProtocol
 			if authProtocolArg == "MD5" {
 				authProtocol = gosnmp.MD5
 				log.Info("Setting auth_protocol=MD5")
@@ -66,7 +66,8 @@ func connect(targetHost string, targetPort int) error {
 			msgFlags := gosnmp.AuthPriv
 
 			authProtocolArg := strings.ToUpper(strings.TrimSpace(args.AuthProtocol))
-			authProtocol := gosnmp.SHA
+
+			var authProtocol gosnmp.SnmpV3AuthProtocol
 			if authProtocolArg == "MD5" {
 				authProtocol = gosnmp.MD5
 			} else if authProtocolArg == "SHA" {
