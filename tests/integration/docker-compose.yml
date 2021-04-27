@@ -1,0 +1,18 @@
+version: '3.1'
+
+services:
+  snmptd:
+    container_name: snmptd
+    build:
+      context: ../../
+      dockerfile: tests/integration/snmptd/Dockerfile
+    ports:
+      - 161:161/udp
+
+  nri-snmp:
+    container_name: integration_nri-snmp_1
+    build:
+      context: ../../
+      dockerfile: tests/integration/Dockerfile
+    dns:
+      - 8.8.8.8

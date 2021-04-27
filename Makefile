@@ -5,9 +5,7 @@ BINARY_NAME   = nri-$(INTEGRATION)
 WORKDIR      := $(shell pwd)
 GO_FILES     := ./src/
 GO_PKGS      := $(shell go list ./... | grep -v "/vendor/")
-GOTOOLS       = github.com/kardianos/govendor \
-                gopkg.in/alecthomas/gometalinter.v2 \
-                github.com/axw/gocov/gocov \
+GOTOOLS       = github.com/axw/gocov/gocov \
                 github.com/stretchr/testify/assert \
                 github.com/AlekSi/gocov-xml
 
@@ -22,22 +20,22 @@ clean:
 tools: check-version
 	@echo "=== $(INTEGRATION) === [ tools ]: Installing tools required by the project..."
 	@go get $(GOTOOLS)
-	@gometalinter.v2 --install
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.33.0
 
 tools-update: check-version
 	@echo "=== $(INTEGRATION) === [ tools-update ]: Updating tools required by the project..."
 	@go get -u $(GOTOOLS)
-	@gometalinter.v2 --install
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.33.0
 
-deps: tools deps-only
+deps: tools
 
 deps-only:
 	@echo "=== $(INTEGRATION) === [ deps ]: Installing package dependencies required by the project..."
-	@govendor sync
+	@./bin/golangci-lint run
 
 validate: deps
 	@echo "=== $(INTEGRATION) === [ validate ]: Validating source code running gometalinter..."
-	#@gometalinter.v2 --config=.gometalinter.json ./...
+	@./bin/golangci-lint run
 
 validate-all: deps
 	@echo "=== $(INTEGRATION) === [ validate ]: Validating source code running gometalinter..."
@@ -54,6 +52,11 @@ compile-only: deps-only
 test: deps
 	@echo "=== $(INTEGRATION) === [ test ]: Running unit tests..."
 	@gocov test $(GO_PKGS) | gocov-xml > coverage.xml
+
+integration-test:
+	@echo "=== $(INTEGRATION) === [ test ]: running integration tests..."
+	@docker-compose -f tests/integration/docker-compose.yml up -d --build
+	@go test -v -tags=integration ./tests/integration/. -count=1 ; (ret=$$?; docker-compose -f tests/integration/docker-compose.yml down && exit $$ret)
 
 # Include thematic Makefiles
 include $(CURDIR)/build/ci.mk
@@ -72,4 +75,4 @@ ifneq "$(GOARCH)" "$(NATIVEARCH)"
 endif
 endif
 
-.PHONY: all build clean tools tools-update deps deps-only validate validate-all compile compile-only test check-version
+.PHONY: all build clean tools tools-update deps deps-only validate validate-all compile compile-only test integration-test check-version
