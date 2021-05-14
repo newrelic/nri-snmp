@@ -4,8 +4,8 @@ INTEGRATION  := snmp
 BINARY_NAME   = nri-$(INTEGRATION)
 WORKDIR      := $(shell pwd)
 GO_FILES     := ./src/
-GOTOOLS       = github.com/kardianos/govendor \
-                github.com/xeipuuv/gojsonschema
+GOTOOLS      = github.com/kardianos/govendor \
+               github.com/xeipuuv/gojsonschema
 
 all: build
 
@@ -59,4 +59,4 @@ include $(CURDIR)/build/ci.mk
 include $(CURDIR)/build/release.mk
 include $(CURDIR)/build/troubleshooting.mk
 
-.PHONY: all build clean tools tools-govendor tools-update deps deps-only validate compile compile-only test integration-test
+.PHONY: all build clean tools tools-update deps deps-only validate compile compile-only test integration-test
