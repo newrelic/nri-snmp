@@ -16,7 +16,7 @@ clean:
 
 tools:
 	@echo "=== $(INTEGRATION) === [ tools ]: Installing tools required by the project..."
-	@go get $(GOTOOLS)
+	@go get -v $(GOTOOLS)
 	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.33.0
 
 tools-update:
