@@ -4,8 +4,7 @@ INTEGRATION  := snmp
 BINARY_NAME   = nri-$(INTEGRATION)
 WORKDIR      := $(shell pwd)
 GO_FILES     := ./src/
-GOTOOLS       = github.com/kardianos/govendor \
-                github.com/xeipuuv/gojsonschema
+GOTOOLS       = github.com/kardianos/govendor
 
 all: build
 

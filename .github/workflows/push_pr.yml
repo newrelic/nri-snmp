@@ -28,6 +28,8 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         continue-on-error: ${{ github.event_name != 'pull_request' }}
+        env:
+          GO111MODULES: off
         with:
           only-new-issues: true
 
