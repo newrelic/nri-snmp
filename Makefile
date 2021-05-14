@@ -48,7 +48,7 @@ test: deps
 	@echo "=== $(INTEGRATION) === [ test ]: Running unit tests..."
 	@go test -race $(GO_FILES) -count=1
 
-integration-test: deps
+integration-test:
 	@echo "=== $(INTEGRATION) === [ test ]: running integration tests..."
 	@docker-compose -f tests/integration/docker-compose.yml up -d --build
 	@go test -v -tags=integration ./tests/integration/. -count=1 ; (ret=$$?; docker-compose -f tests/integration/docker-compose.yml down && exit $$ret)
