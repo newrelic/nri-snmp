@@ -17,50 +17,66 @@
 		{
 			"checksumSHA1": "ZfId5ZYn7jmL0xTxooHcxrLlXoA=",
 			"path": "github.com/newrelic/infra-integrations-sdk/args",
-			"revision": "5684aca7c40b455f67ee8b75dd0c477497f8c25d",
-			"revisionTime": "2020-01-30T11:13:03Z"
+			"revision": "3f45fc54205582b00cf45bbe06d7906147456169",
+			"revisionTime": "2021-04-06T15:12:06Z",
+			"version": "v3.6.7",
+			"versionExact": "v3.6.7"
 		},
 		{
 			"checksumSHA1": "31zRckJsW2ysGejUOfODuQJfWlo=",
 			"path": "github.com/newrelic/infra-integrations-sdk/data/attribute",
-			"revision": "5684aca7c40b455f67ee8b75dd0c477497f8c25d",
-			"revisionTime": "2020-01-30T11:13:03Z"
+			"revision": "3f45fc54205582b00cf45bbe06d7906147456169",
+			"revisionTime": "2021-04-06T15:12:06Z",
+			"version": "v3.6.7",
+			"versionExact": "v3.6.7"
 		},
 		{
 			"checksumSHA1": "g3YmAYfuMWFGW3ZoAxOatE9IZPY=",
 			"path": "github.com/newrelic/infra-integrations-sdk/data/event",
-			"revision": "5684aca7c40b455f67ee8b75dd0c477497f8c25d",
-			"revisionTime": "2020-01-30T11:13:03Z"
+			"revision": "3f45fc54205582b00cf45bbe06d7906147456169",
+			"revisionTime": "2021-04-06T15:12:06Z",
+			"version": "v3.6.7",
+			"versionExact": "v3.6.7"
 		},
 		{
 			"checksumSHA1": "EOoxXGqFDPkCvj7wec2S5kCXY2I=",
 			"path": "github.com/newrelic/infra-integrations-sdk/data/inventory",
-			"revision": "5684aca7c40b455f67ee8b75dd0c477497f8c25d",
-			"revisionTime": "2020-01-30T11:13:03Z"
+			"revision": "3f45fc54205582b00cf45bbe06d7906147456169",
+			"revisionTime": "2021-04-06T15:12:06Z",
+			"version": "v3.6.7",
+			"versionExact": "v3.6.7"
 		},
 		{
-			"checksumSHA1": "0c+7FpKvJY1fop09wCVo3ZfsRAU=",
+			"checksumSHA1": "dB/R1uIS/bM1s0rE6Pw+zjdPSdo=",
 			"path": "github.com/newrelic/infra-integrations-sdk/data/metric",
-			"revision": "5684aca7c40b455f67ee8b75dd0c477497f8c25d",
-			"revisionTime": "2020-01-30T11:13:03Z"
+			"revision": "3f45fc54205582b00cf45bbe06d7906147456169",
+			"revisionTime": "2021-04-06T15:12:06Z",
+			"version": "v3.6.7",
+			"versionExact": "v3.6.7"
 		},
 		{
-			"checksumSHA1": "2LmLjgeHSJiKrlkdTB1FIPIwsqo=",
+			"checksumSHA1": "FU5KPiAdtCWVVUs8rgT3Ol4wJgw=",
 			"path": "github.com/newrelic/infra-integrations-sdk/integration",
-			"revision": "5684aca7c40b455f67ee8b75dd0c477497f8c25d",
-			"revisionTime": "2020-01-30T11:13:03Z"
+			"revision": "3f45fc54205582b00cf45bbe06d7906147456169",
+			"revisionTime": "2021-04-06T15:12:06Z",
+			"version": "v3.6.7",
+			"versionExact": "v3.6.7"
 		},
 		{
-			"checksumSHA1": "u/P0xCzi5jNy640ldUW5yeG3d0U=",
+			"checksumSHA1": "yIohsPe5pF9QX2lzBRjDWrYA6Qw=",
 			"path": "github.com/newrelic/infra-integrations-sdk/log",
-			"revision": "5684aca7c40b455f67ee8b75dd0c477497f8c25d",
-			"revisionTime": "2020-01-30T11:13:03Z"
+			"revision": "3f45fc54205582b00cf45bbe06d7906147456169",
+			"revisionTime": "2021-04-06T15:12:06Z",
+			"version": "v3.6.7",
+			"versionExact": "v3.6.7"
 		},
 		{
-			"checksumSHA1": "BsHp62Etporko0d+4GpVxrP2qtw=",
+			"checksumSHA1": "5Hp9DNZV2y6c8ptvLhBa1hWPxBA=",
 			"path": "github.com/newrelic/infra-integrations-sdk/persist",
-			"revision": "5684aca7c40b455f67ee8b75dd0c477497f8c25d",
-			"revisionTime": "2020-01-30T11:13:03Z"
+			"revision": "3f45fc54205582b00cf45bbe06d7906147456169",
+			"revisionTime": "2021-04-06T15:12:06Z",
+			"version": "v3.6.7",
+			"versionExact": "v3.6.7"
 		},
 		{
 			"checksumSHA1": "Qo2E/26skb9mZQ3b2Mh6QDkpBLs=",
@@ -86,6 +102,56 @@
 			"path": "github.com/stretchr/objx",
 			"revision": "9e1dfc121bca96d392da5d00591953bdb54ab306",
 			"revisionTime": "2018-06-26T19:55:58Z"
+		},
+		{
+			"checksumSHA1": "bae8IfDLNuW/wqEicyrKV8q7K7Y=",
+			"path": "github.com/stretchr/testify",
+			"revision": "221dbe5ed46703ee255b1da0dec05086f5035f62",
+			"revisionTime": "2019-05-17T17:51:56Z",
+			"version": "v1.4.0",
+			"versionExact": "v1.4.0"
+		},
+		{
+			"checksumSHA1": "/7bZ0f2fM9AAsLf3nMca6Gtlm6E=",
+			"path": "github.com/stretchr/testify/assert",
+			"revision": "221dbe5ed46703ee255b1da0dec05086f5035f62",
+			"revisionTime": "2019-05-17T17:51:56Z",
+			"version": "v1.4.0",
+			"versionExact": "v1.4.0"
+		},
+		{
+			"checksumSHA1": "fg3TzS9/QK3wZbzei3Z6O8XPLHg=",
+			"path": "github.com/stretchr/testify/http",
+			"revision": "221dbe5ed46703ee255b1da0dec05086f5035f62",
+			"revisionTime": "2019-05-17T17:51:56Z",
+			"version": "v1.4.0",
+			"versionExact": "v1.4.0"
+		},
+		{
+			"checksumSHA1": "bg70xAHEu6HRf2iFu8h5iJBjUfg=",
+			"path": "github.com/stretchr/testify/mock",
+			"revision": "221dbe5ed46703ee255b1da0dec05086f5035f62",
+			"revisionTime": "2019-05-17T17:51:56Z",
+			"version": "v1.4.0",
+			"versionExact": "v1.4.0"
+		},
+		{
+			"checksumSHA1": "MUqHexhcQbBHzk85/AI/f3ICv+M=",
+			"path": "github.com/xeipuuv/gojsonpointer",
+			"revision": "02993c407bfbf5f6dae44c4f4b1cf6a39b5fc5bb",
+			"revisionTime": "2019-09-04T05:19:12Z"
+		},
+		{
+			"checksumSHA1": "cjCjdAbLpKV1bxMpMRzC5Fn4R34=",
+			"path": "github.com/xeipuuv/gojsonreference",
+			"revision": "bd5ef7bd5415a7ac448318e64f11a24cd21e594b",
+			"revisionTime": "2018-01-27T04:06:03Z"
+		},
+		{
+			"checksumSHA1": "D5T2yQwwQnYjiqtEkJmY9sIogcE=",
+			"path": "github.com/xeipuuv/gojsonschema",
+			"revision": "b076d39a02e5015af0a2a96636e4cc479ecd9f45",
+			"revisionTime": "2020-10-27T01:00:38Z"
 		},
 		{
 			"checksumSHA1": "GtamqiJoL7PGHsN454AoffBFMa8=",
