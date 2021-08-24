@@ -1,30 +1,22 @@
-# Configuration file template, provided in case you want to provide extra
-# configuration over the snmp-config.yml
-# file.
-#
-# For a complete description of the Configuration File Specification, please
-# refer to the Integrations SDK documentation:
-# https://docs.newrelic.com/docs/integrations/integrations-sdk/file-specifications
-
-integration_name: com.newrelic.snmp
-
-instances:
-  - name: <INSTANCE IDENTIFIER>
-    command: metrics
-    arguments:
-      snmp_host: localhost
-      snmp_port: 161
-      community: public
-      collection_files: "/etc/newrelic-infra/integrations.d/snmp-metrics.yml"
-    labels:
-      key1: <LABEL_VALUE>
-
-  - name: <OTHER INSTANCE IDENTIFIER>
-    command: inventory
-    arguments:
-      snmp_host: localhost
-      snmp_port: 161
-      community: public
-      collection_files: "/etc/newrelic-infra/integrations.d/snmp-metrics.yml"
-    labels:
-      key1: <LABEL_VALUE>
+integrations:
+- name: nri-snmp
+  env:
+    COLLECTION_FILES: /etc/newrelic-infra/integrations.d/snmp-metrics.yml
+    COMMUNITY: public
+    METRICS: "true"
+    SNMP_HOST: localhost
+    SNMP_PORT: "161"
+  interval: 30s
+  labels:
+    key1: <LABEL_VALUE>
+- name: nri-snmp
+  env:
+    COLLECTION_FILES: /etc/newrelic-infra/integrations.d/snmp-metrics.yml
+    COMMUNITY: public
+    INVENTORY: "true"
+    SNMP_HOST: localhost
+    SNMP_PORT: "161"
+  interval: 30s
+  labels:
+    key1: <LABEL_VALUE>
+  inventory_source: config/snmp

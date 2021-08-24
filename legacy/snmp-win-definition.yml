@@ -7,7 +7,7 @@
 # https://docs.newrelic.com/docs/integrations/integrations-sdk/file-specifications
 
 name: com.newrelic.snmp
-description: Reports status and metrics for SNMP service
+description: Reports status and metrics for SNMP service. Legacy file kept for compatibility.
 protocol_version: 2
 os: windows
 
@@ -30,5 +30,5 @@ commands:
   events:
     command:
       - .\bin\nri-snmp.exe
-    - --events
+      - --events
     interval: 30
