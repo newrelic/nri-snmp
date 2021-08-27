@@ -7,7 +7,7 @@
 # https://docs.newrelic.com/docs/integrations/integrations-sdk/file-specifications
 
 name: com.newrelic.snmp
-description: Reports status and metrics for SNMP service. Legacy file kept for compatibility.
+description: Reports status and metrics for SNMP service
 protocol_version: 2
 os: windows
 
