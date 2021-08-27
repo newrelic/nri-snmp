@@ -29,6 +29,6 @@ commands:
     interval: 30
   events:
     command:
-      - ./bin/nri-snmp
-      - --events
+    - ./bin/nri-snmp
+    - --events
     interval: 30

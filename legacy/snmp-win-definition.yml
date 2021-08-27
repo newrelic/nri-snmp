@@ -30,5 +30,5 @@ commands:
   events:
     command:
       - .\bin\nri-snmp.exe
-      - --events
+    - --events
     interval: 30
