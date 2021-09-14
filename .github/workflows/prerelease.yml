@@ -130,9 +130,9 @@ jobs:
     needs: [prerelease]
     env:
       GOPATH: ${{ github.workspace }}
-      PFX_CERTIFICATE_BASE64: ${{ secrets.OHAI_PFX_CERTIFICATE_BASE64 }} # base64 encoded
+      PFX_CERTIFICATE_BASE64: ${{ secrets.PFX_TEST_CERT }} # base64 encoded
       PFX_CERTIFICATE_DESCRIPTION: 'New Relic'
-      PFX_PASSPHRASE:  ${{ secrets.OHAI_PFX_PASSPHRASE }}
+      PFX_PASSPHRASE:  ${{ secrets.PFX_TEST_PASS }}
     defaults:
       run:
         working-directory: src/github.com/${{env.ORIGINAL_REPO_NAME}}
