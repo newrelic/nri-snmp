@@ -1,30 +1,84 @@
-# Configuration file template, provided in case you want to provide extra
-# configuration over the snmp-config.yml
-# file.
-#
-# For a complete description of the Configuration File Specification, please
-# refer to the Integrations SDK documentation:
-# https://docs.newrelic.com/docs/integrations/integrations-sdk/file-specifications
+integrations:
+- name: nri-snmp
+  env:
+    COLLECTION_FILES: /etc/newrelic-infra/integrations.d/snmp-metrics.yml
+    COMMUNITY: public
+    METRICS: "true"
+    SNMP_HOST: localhost
+    SNMP_PORT: "161"
 
-integration_name: com.newrelic.snmp
+    # The number of seconds to wait before a request times out
+    TIMEOUT: 10
 
-instances:
-  - name: <INSTANCE IDENTIFIER>
-    command: metrics
-    arguments:
-      snmp_host: localhost
-      snmp_port: 161
-      community: public
-      collection_files: "/etc/newrelic-infra/integrations.d/snmp-metrics.yml"
-    labels:
-      key1: <LABEL_VALUE>
+    # The number of attempts to fetch metrics
+    RETRIES: 0
 
-  - name: <OTHER INSTANCE IDENTIFIER>
-    command: inventory
-    arguments:
-      snmp_host: localhost
-      snmp_port: 161
-      community: public
-      collection_files: "/etc/newrelic-infra/integrations.d/snmp-metrics.yml"
-    labels:
-      key1: <LABEL_VALUE>
+    # if true doubles timeout in each retry
+    EXPONENTIAL_TIMEOUT: "false"
+
+    # if true uses SNMP Version 3
+    V3: "false"
+
+    # For V3 only. Set the security level. Valid values are noAuthnoPriv, authNoPriv or authPriv
+    # SECURITY_LEVEL:
+
+    # For V3 only. The security name that identifies the SNMPv3 user
+    # USERNAME:
+
+    # For V3 only. The algorithm used for SNMPv3 authentication. Valid values are SHA or MD5
+    # AUTH_PROTOCOL: "SHA"
+
+    # For V3 only. The password used to generate the key used for SNMPv3 authentication
+    # AUTH_PASSPHRASE:
+
+    # For V3 only. The algorithm used for SNMPv3 message integrity. Valid values are "AES" or "DES"
+    # PRIV_PROTOCOL: "AES"
+
+    # For V3 only. The password used to generate the key used to verify SNMPv3 message integrity
+    # PRIV_PASSPHRASE:
+
+  interval: 30s
+  labels:
+    key1: <LABEL_VALUE>
+- name: nri-snmp
+  env:
+    COLLECTION_FILES: /etc/newrelic-infra/integrations.d/snmp-metrics.yml
+    COMMUNITY: public
+    INVENTORY: "true"
+    SNMP_HOST: localhost
+    SNMP_PORT: "161"
+
+    # The number of seconds to wait before a request times out
+    TIMEOUT: 10
+
+    # The number of attempts to fetch metrics
+    RETRIES: 0
+
+    # if true doubles timeout in each retry
+    EXPONENTIAL_TIMEOUT: "false"
+
+    # if true uses SNMP Version 3
+    V3: "false"
+
+    # For V3 only. Set the security level. Valid values are noAuthnoPriv, authNoPriv or authPriv
+    # SECURITY_LEVEL:
+
+    # For V3 only. The security name that identifies the SNMPv3 user
+    # USERNAME:
+
+    # For V3 only. The algorithm used for SNMPv3 authentication. Valid values are SHA or MD5
+    # AUTH_PROTOCOL: "SHA"
+
+    # For V3 only. The password used to generate the key used for SNMPv3 authentication
+    # AUTH_PASSPHRASE:
+
+    # For V3 only. The algorithm used for SNMPv3 message integrity. Valid values are "AES" or "DES"
+    # PRIV_PROTOCOL: "AES"
+
+    # For V3 only. The password used to generate the key used to verify SNMPv3 message integrity
+    # PRIV_PASSPHRASE:
+
+  interval: 30s
+  labels:
+    key1: <LABEL_VALUE>
+  inventory_source: config/snmp
