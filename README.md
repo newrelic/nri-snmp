@@ -1,6 +1,6 @@
-[![Community Plus header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Plus.png)](https://opensource.newrelic.com/oss-category/#community-plus)
+⚠️ We recommend using New Relic [Network Performance Monitoring](https://docs.newrelic.com/docs/network-performance-monitoring/) to collect both SNMP and Network Flows. This integration is no longer being maintained.  
 
->⚠️ We recommend using New Relic [Network Performance Monitoring](https://docs.newrelic.com/docs/network-performance-monitoring/) to collect both SNMP and Network Flows. This integration will be deprecated in favor of the new solution.  
+[![Community Plus header](https://github.com/newrelic/opensource-website/raw/master/src/images/categories/Community_Plus.png)](https://opensource.newrelic.com/oss-category/#community-plus)
 
 # New Relic Infrastructure integration for SNMP
 
